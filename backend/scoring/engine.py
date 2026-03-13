@@ -1,0 +1,59 @@
+"""
+Sistema de puntuación por partido.
+
+Pesos distintos por rol (top, jungle, mid, adc, support, coach).
+Bonuses: robo de objetivos, multikills, gold_diff@15.
+Normalización anti-snowball para partidas largas.
+"""
+from typing import Literal
+
+Role = Literal["top", "jungle", "mid", "adc", "support", "coach"]
+
+# Pesos base por estadística y rol — valores a calibrar con datos reales
+ROLE_WEIGHTS: dict[Role, dict[str, float]] = {
+    "top": {
+        "kills": 2.0, "deaths": -1.5, "assists": 1.0,
+        "cs_per_min": 0.5, "gold_diff_15": 0.01,
+    },
+    "jungle": {
+        "kills": 2.0, "deaths": -1.5, "assists": 1.5,
+        "cs_per_min": 0.3, "objective_steals": 5.0,
+    },
+    "mid": {
+        "kills": 2.0, "deaths": -1.5, "assists": 1.0,
+        "cs_per_min": 0.5, "gold_diff_15": 0.01,
+    },
+    "adc": {
+        "kills": 2.0, "deaths": -1.5, "assists": 0.75,
+        "cs_per_min": 0.6, "damage_share": 10.0,
+    },
+    "support": {
+        "kills": 1.5, "deaths": -1.0, "assists": 2.0,
+        "vision_score": 0.1, "objective_steals": 3.0,
+    },
+    "coach": {
+        # Puntuación basada en pick/ban (fuente: Leaguepedia) — WIP
+        "picks_correct": 3.0, "bans_effective": 2.0,
+    },
+}
+
+MULTIKILL_BONUS = {"double": 2.0, "triple": 5.0, "quadra": 8.0, "penta": 15.0}
+GAME_LENGTH_NORMALIZATION_THRESHOLD_MIN = 30  # partidas > 30 min aplican factor
+
+
+def calculate_match_points(stats: dict, role: Role, game_duration_min: float) -> float:
+    """Calcula los fantasy points de un jugador para un partido concreto."""
+    weights = ROLE_WEIGHTS[role]
+    points = sum(stats.get(stat, 0) * weight for stat, weight in weights.items())
+
+    # Bonus multikills
+    for kill_type, bonus in MULTIKILL_BONUS.items():
+        if stats.get(kill_type, False):
+            points += bonus
+
+    # Normalización anti-snowball: reduce ventaja de partidas muy largas
+    if game_duration_min > GAME_LENGTH_NORMALIZATION_THRESHOLD_MIN:
+        excess = game_duration_min - GAME_LENGTH_NORMALIZATION_THRESHOLD_MIN
+        points = points / (1 + excess * 0.01)
+
+    return round(points, 2)

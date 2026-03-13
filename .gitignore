@@ -1,0 +1,47 @@
+# ─── Secrets — NUNCA commitear ───────────────────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+
+# ─── Frontend (Next.js) ──────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+
+# ─── Backend (Python) ────────────────────────────────────────────────────────
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/venv/
+backend/.venv/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# ─── Supabase ─────────────────────────────────────────────────────────────────
+.supabase/
+
+# ─── Editor ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+backend/data/
+
+# ─── WSL artifacts ───────────────────────────────────────────────────────────
+*:Zone.Identifier
+
+# ─── Local agent config ──────────────────────────────────────────────────────
+.claude/
+
+# ─── Data files ──────────────────────────────────────────────────────────────
+data/

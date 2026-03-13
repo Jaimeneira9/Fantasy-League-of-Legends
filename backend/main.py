@@ -1,0 +1,168 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+import logging
+import os
+import traceback
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi import FastAPI, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from supabase import create_client, Client
+
+from auth.dependencies import get_current_user, get_supabase
+
+logger = logging.getLogger("lolfantasy")
+logging.basicConfig(level=logging.INFO)
+
+_scheduler = BackgroundScheduler()
+
+
+def _get_supabase() -> Client:
+    return create_client(
+        os.environ["SUPABASE_URL"],
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+    )
+
+
+def _job_market_refresh() -> None:
+    from market.refresh import run_all_leagues_refresh
+    try:
+        run_all_leagues_refresh(_get_supabase())
+        logger.info("Scheduled market refresh completed")
+    except Exception as exc:
+        logger.error("market_refresh failed: %s", exc, exc_info=True)
+
+
+def _job_nightly_ingest() -> None:
+    from pipeline.ingest import nightly_ingest
+    try:
+        nightly_ingest(_get_supabase())
+        logger.info("Nightly ingest completed")
+    except Exception as exc:
+        logger.error("nightly_ingest failed: %s", exc, exc_info=True)
+
+
+def _job_check_split_reset() -> None:
+    """Runs daily: check if today is the reset_date for any active split."""
+    from admin.split_reset import run_split_reset_if_due
+    try:
+        run_split_reset_if_due(_get_supabase())
+    except Exception as exc:
+        logger.error("split_reset check failed: %s", exc, exc_info=True)
+
+
+def _bootstrap_closes_at(supabase: Client) -> None:
+    """Set closes_at on any active listings that have none (legacy data)."""
+    from market.refresh import _LISTING_MINUTES
+    closes_at = (datetime.now(timezone.utc) + timedelta(minutes=_LISTING_MINUTES)).isoformat()
+    result = (
+        supabase.table("market_listings")
+        .update({"closes_at": closes_at})
+        .eq("status", "active")
+        .is_("closes_at", "null")
+        .execute()
+    )
+    updated = len(result.data) if result.data else 0
+    if updated:
+        logger.info("Bootstrapped closes_at on %d active listings", updated)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    sb = _get_supabase()
+
+    _scheduler.add_job(_job_market_refresh,   "interval", hours=1,            id="market_refresh",  replace_existing=True)
+    _scheduler.add_job(_job_nightly_ingest,   "cron",     hour=3,  minute=0,  id="nightly_ingest",  replace_existing=True)
+    _scheduler.add_job(_job_check_split_reset,"cron",     hour=1,  minute=0,  id="split_reset_check", replace_existing=True)
+    _scheduler.start()
+    logger.info("Background scheduler started")
+
+    _bootstrap_closes_at(sb)
+
+    yield
+
+    _scheduler.shutdown(wait=False)
+    logger.info("Background scheduler stopped")
+
+
+from routers import players, leagues, market, scoring, trades, roster, activity, bids
+from routers import splits as splits_router
+
+app = FastAPI(title="LoL Fantasy API", version="0.1.0", lifespan=lifespan)
+
+CORS_ORIGINS = ["http://localhost:3000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error("Unhandled exception: %s\n%s", exc, traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Error interno: {type(exc).__name__}: {exc}"},
+        headers={
+            "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
+
+
+app.include_router(players.router,      prefix="/players",   tags=["players"])
+app.include_router(leagues.router,      prefix="/leagues",   tags=["leagues"])
+app.include_router(market.router,       prefix="/market",    tags=["market"])
+app.include_router(scoring.router,      prefix="/scoring",   tags=["scoring"])
+app.include_router(trades.router,       prefix="/trades",    tags=["trades"])
+app.include_router(roster.router,       prefix="/roster",    tags=["roster"])
+app.include_router(activity.router,     prefix="/activity",  tags=["activity"])
+app.include_router(bids.router,         prefix="/bids",      tags=["bids"])
+app.include_router(splits_router.router,prefix="/splits",    tags=["splits"])
+
+
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.post("/debug/market-refresh", tags=["debug"])
+def debug_market_refresh() -> dict:
+    """Fuerza resolución de pujas y refresco del mercado (sin auth, solo dev).
+    Solo activo cuando ENVIRONMENT=development."""
+    if os.environ.get("ENVIRONMENT") != "development":
+        from fastapi import HTTPException as _HTTPException
+        raise _HTTPException(status_code=403, detail="Solo disponible en development")
+    from market.refresh import run_all_leagues_refresh
+    run_all_leagues_refresh(_get_supabase())
+    return {"message": "Market refresh completado"}
+
+
+@app.post("/admin/market-refresh", tags=["admin"])
+async def trigger_market_refresh(
+    supabase: Client = Depends(get_supabase),
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Fuerza un refresco del mercado inmediato (dev/admin)."""
+    from market.refresh import run_all_leagues_refresh
+    run_all_leagues_refresh(supabase)
+    return {"message": "Market refresh completado"}
+
+
+@app.post("/admin/split-reset", tags=["admin"])
+async def trigger_split_reset(
+    supabase: Client = Depends(get_supabase),
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Fuerza el reset de split manualmente (dev/admin)."""
+    from admin.split_reset import run_split_reset_if_due
+    run_split_reset_if_due(supabase, force=True)
+    return {"message": "Split reset completado"}

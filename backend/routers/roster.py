@@ -1,0 +1,265 @@
+from typing import Literal
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from supabase import Client
+
+from auth.dependencies import get_current_user, get_supabase
+
+router = APIRouter()
+
+Slot = Literal[
+    "starter_1", "starter_2", "starter_3", "starter_4", "starter_5",
+    "coach", "bench_1", "bench_2",
+]
+
+ALL_SLOTS: list[Slot] = [
+    "starter_1", "starter_2", "starter_3", "starter_4", "starter_5",
+    "coach", "bench_1", "bench_2",
+]
+
+
+# ---------------------------------------------------------------------------
+# Schemas
+# ---------------------------------------------------------------------------
+
+class PlayerBrief(BaseModel):
+    id: UUID
+    name: str
+    team: str
+    role: str
+    image_url: str | None
+    current_price: float
+
+
+class RosterPlayerOut(BaseModel):
+    id: UUID
+    slot: Slot
+    price_paid: float
+    for_sale: bool
+    is_protected: bool = False
+    player: PlayerBrief
+
+
+class RosterOut(BaseModel):
+    league_id: UUID
+    member_id: str
+    remaining_budget: float
+    total_points: float
+    players: list[RosterPlayerOut]
+
+
+class MoveRequest(BaseModel):
+    roster_player_id: UUID
+    new_slot: Slot
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _get_member(supabase: Client, league_id: str, user_id: str) -> dict:
+    resp = (
+        supabase.table("league_members")
+        .select("id, remaining_budget, total_points")
+        .eq("league_id", league_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not resp.data:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No eres miembro de esta liga")
+    return resp.data[0]
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/{league_id}", response_model=RosterOut)
+async def get_roster(
+    league_id: UUID,
+    supabase: Client = Depends(get_supabase),
+    user: dict = Depends(get_current_user),
+) -> RosterOut:
+    """Devuelve la plantilla del usuario en una liga."""
+    member = _get_member(supabase, str(league_id), user["id"])
+
+    roster_resp = (
+        supabase.table("rosters")
+        .select("id")
+        .eq("member_id", member["id"])
+        .execute()
+    )
+
+    players_out: list[RosterPlayerOut] = []
+
+    if roster_resp.data:
+        rp_resp = (
+            supabase.table("roster_players")
+            .select("id, slot, price_paid, for_sale, is_protected, players(id, name, team, role, image_url, current_price)")
+            .eq("roster_id", roster_resp.data[0]["id"])
+            .execute()
+        )
+        for row in (rp_resp.data or []):
+            players_out.append(RosterPlayerOut(
+                id=row["id"],
+                slot=row["slot"],
+                price_paid=float(row["price_paid"]),
+                for_sale=row["for_sale"],
+                is_protected=bool(row.get("is_protected", False)),
+                player=PlayerBrief(**row["players"]),
+            ))
+
+    return RosterOut(
+        league_id=league_id,
+        member_id=member["id"],
+        remaining_budget=float(member["remaining_budget"]),
+        total_points=float(member["total_points"]),
+        players=players_out,
+    )
+
+
+@router.patch("/{league_id}/move", status_code=status.HTTP_200_OK)
+async def move_player(
+    league_id: UUID,
+    body: MoveRequest,
+    supabase: Client = Depends(get_supabase),
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Mueve un jugador a otro slot. Si el destino está ocupado, intercambia ambos."""
+    member = _get_member(supabase, str(league_id), user["id"])
+
+    roster_resp = (
+        supabase.table("rosters")
+        .select("id")
+        .eq("member_id", member["id"])
+        .execute()
+    )
+    if not roster_resp.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No tienes equipo en esta liga")
+    roster_id = roster_resp.data[0]["id"]
+
+    # Jugador a mover
+    rp_resp = (
+        supabase.table("roster_players")
+        .select("id, slot")
+        .eq("id", str(body.roster_player_id))
+        .eq("roster_id", roster_id)
+        .execute()
+    )
+    if not rp_resp.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jugador no encontrado en tu equipo")
+
+    current_slot: str = rp_resp.data[0]["slot"]
+    if current_slot == body.new_slot:
+        return {"message": "El jugador ya está en ese slot"}
+
+    # Comprobar si el slot destino está ocupado
+    occupant_resp = (
+        supabase.table("roster_players")
+        .select("id")
+        .eq("roster_id", roster_id)
+        .eq("slot", body.new_slot)
+        .execute()
+    )
+
+    if occupant_resp.data:
+        # Swap: el ocupante toma el slot actual del jugador que se mueve.
+        # Usamos SQL directo para evitar conflicto de unique constraint.
+        occupant_id = occupant_resp.data[0]["id"]
+        supabase.rpc("swap_roster_slots", {
+            "p_roster_id": roster_id,
+            "p_id_a": str(body.roster_player_id),
+            "p_slot_a": body.new_slot,
+            "p_id_b": occupant_id,
+            "p_slot_b": current_slot,
+        }).execute()
+    else:
+        supabase.table("roster_players").update({"slot": body.new_slot}).eq(
+            "id", str(body.roster_player_id)
+        ).execute()
+
+    return {"message": "Posición actualizada"}
+
+
+class ProtectRequest(BaseModel):
+    roster_player_id: UUID
+
+
+@router.patch("/{league_id}/protect", status_code=status.HTTP_200_OK)
+async def toggle_protect(
+    league_id: UUID,
+    body: ProtectRequest,
+    supabase: Client = Depends(get_supabase),
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Marca/desmarca un jugador como protegido para el reset de split.
+    Solo puede haber 1 jugador protegido por equipo.
+    No se puede proteger al mismo jugador que se protegió en el split anterior."""
+    member = _get_member(supabase, str(league_id), user["id"])
+
+    roster_resp = (
+        supabase.table("rosters")
+        .select("id")
+        .eq("member_id", member["id"])
+        .execute()
+    )
+    if not roster_resp.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No tienes equipo en esta liga")
+    roster_id = roster_resp.data[0]["id"]
+
+    # Verificar que el jugador pertenece al roster
+    rp_resp = (
+        supabase.table("roster_players")
+        .select("id, is_protected, player_id")
+        .eq("id", str(body.roster_player_id))
+        .eq("roster_id", roster_id)
+        .execute()
+    )
+    if not rp_resp.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jugador no encontrado en tu equipo")
+
+    currently_protected = bool(rp_resp.data[0].get("is_protected", False))
+    player_id = rp_resp.data[0]["player_id"]
+
+    if currently_protected:
+        # Desproteger
+        supabase.table("roster_players").update({"is_protected": False}).eq(
+            "id", str(body.roster_player_id)
+        ).execute()
+        return {"message": "Protección eliminada", "is_protected": False}
+
+    # Comprobar restricción: ¿protegió este jugador en el split anterior?
+    prev_split_resp = (
+        supabase.table("splits")
+        .select("id")
+        .eq("is_active", False)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if prev_split_resp.data:
+        prev_split_id = prev_split_resp.data[0]["id"]
+        history_resp = (
+            supabase.table("split_protect_history")
+            .select("id")
+            .eq("member_id", member["id"])
+            .eq("player_id", str(player_id))
+            .eq("split_id", prev_split_id)
+            .execute()
+        )
+        if history_resp.data:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ya protegiste a este jugador en el split anterior. Elige otro.",
+            )
+
+    # Proteger este, desproteger todos los demás
+    supabase.table("roster_players").update({"is_protected": False}).eq(
+        "roster_id", roster_id
+    ).execute()
+    supabase.table("roster_players").update({"is_protected": True}).eq(
+        "id", str(body.roster_player_id)
+    ).execute()
+    return {"message": "Jugador protegido para el reset", "is_protected": True}
