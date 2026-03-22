@@ -59,12 +59,12 @@ export function LeagueRow({ league }: { league: League }) {
     <div
       className="rounded-xl overflow-hidden transition-all duration-200"
       style={{
-        background: hovered ? "white" : "var(--bg-surface)",
+        background: hovered ? "var(--bg-panel)" : "var(--bg-surface)",
         borderTop: "1px solid var(--border-subtle)",
         borderRight: "1px solid var(--border-subtle)",
         borderBottom: "1px solid var(--border-subtle)",
         borderLeft: `4px solid ${accent}`,
-        boxShadow: hovered ? "0 4px 20px rgba(26,28,26,0.08)" : "none",
+        boxShadow: hovered ? "0 4px 20px rgba(0,0,0,0.4)" : "none",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
