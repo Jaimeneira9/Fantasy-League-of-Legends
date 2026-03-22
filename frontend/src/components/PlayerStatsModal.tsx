@@ -240,11 +240,9 @@ function DmgProgressBar({ pct, roleHex }: { pct: number; roleHex: string }) {
 
 function TabJornada({
   stats,
-  totalPoints,
   role,
 }: {
   stats: MatchStat[];
-  totalPoints: number;
   role: string;
 }) {
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -870,7 +868,6 @@ export function PlayerStatsModal({ playerId, playerHint, onClose }: PlayerStatsM
               {tab === "jornada" && (
                 <TabJornada
                   stats={data?.stats ?? []}
-                  totalPoints={totalPoints}
                   role={role}
                 />
               )}

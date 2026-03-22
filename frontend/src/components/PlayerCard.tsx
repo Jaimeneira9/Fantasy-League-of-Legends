@@ -51,7 +51,7 @@ export interface PlayerCardProps {
   leagueId?: string;
 }
 
-export function PlayerCard({ player, matchStats = [], totalPoints, showPrice = true, splitName, leagueId }: PlayerCardProps) {
+export function PlayerCard({ player, matchStats = [], totalPoints, showPrice = true, leagueId }: PlayerCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(
     matchStats.length > 0 ? matchStats[matchStats.length - 1].week : null
