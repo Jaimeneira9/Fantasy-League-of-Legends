@@ -48,7 +48,7 @@ export default function MarketPage() {
   const searchParams = useSearchParams();
 
   const tabFromUrl = searchParams.get("tab");
-  const initialTab: Tab = (tabFromUrl && URL_TAB_MAP[tabFromUrl]) ?? "mercado";
+  const initialTab: Tab = (tabFromUrl ? URL_TAB_MAP[tabFromUrl] : null) ?? "mercado";
 
   const [tab, setTab]               = useState<Tab>(initialTab);
   const [budget, setBudget]         = useState<number | null>(null);
