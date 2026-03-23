@@ -4,7 +4,6 @@ import { useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 
 export default function OnboardingPage() {
   const router = useRouter();
