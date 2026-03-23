@@ -52,7 +52,6 @@ export type Database = {
       }
       league_members: {
         Row: {
-          display_name: string | null
           id: string
           joined_at: string
           league_id: string
@@ -61,7 +60,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          display_name?: string | null
           id?: string
           joined_at?: string
           league_id: string
@@ -70,7 +68,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          display_name?: string | null
           id?: string
           joined_at?: string
           league_id?: string

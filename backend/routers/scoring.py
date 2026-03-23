@@ -12,7 +12,7 @@ router = APIRouter()
 class LeaderboardEntry(BaseModel):
     rank: int
     member_id: UUID
-    display_name: str | None
+    username: str | None = None
     total_points: float
     remaining_budget: float
     player_count: int
@@ -40,12 +40,24 @@ async def get_leaderboard(
 
     members_resp = (
         supabase.table("league_members")
-        .select("id, display_name, total_points, remaining_budget")
+        .select("id, user_id, total_points, remaining_budget")
         .eq("league_id", str(league_id))
         .order("total_points", desc=True)
         .execute()
     )
     members = members_resp.data or []
+
+    # Traer usernames de profiles en una sola query
+    user_ids = [m["user_id"] for m in members if m.get("user_id")]
+    profiles_map: dict[str, str] = {}
+    if user_ids:
+        profiles_resp = (
+            supabase.table("profiles")
+            .select("id, username")
+            .in_("id", user_ids)
+            .execute()
+        )
+        profiles_map = {p["id"]: p["username"] for p in (profiles_resp.data or [])}
 
     player_counts: dict[str, int] = {}
     for m in members:
@@ -71,7 +83,7 @@ async def get_leaderboard(
         LeaderboardEntry(
             rank=i + 1,
             member_id=m["id"],
-            display_name=m.get("display_name"),
+            username=profiles_map.get(m.get("user_id", ""), None),
             total_points=float(m["total_points"] or 0),
             remaining_budget=float(m["remaining_budget"] or 0),
             player_count=player_counts.get(m["id"], 0),

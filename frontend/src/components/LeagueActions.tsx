@@ -170,7 +170,6 @@ function CreateForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
 // ---------------------------------------------------------------------------
 function JoinForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const [code, setCode] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -179,7 +178,7 @@ function JoinForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => vo
     setBusy(true);
     setError(null);
     try {
-      await api.leagues.join(code.trim(), displayName.trim() || undefined);
+      await api.leagues.join(code.trim());
       onDone();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al unirse");
@@ -211,32 +210,6 @@ function JoinForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => vo
           required
           placeholder="ej. a3f9c1b2"
           className="w-full rounded-lg px-3 py-2 text-sm placeholder-[#7c7589] font-mono outline-none transition-colors"
-          style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-medium)",
-            color: "var(--text-primary)",
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = "var(--color-primary)";
-            e.currentTarget.style.boxShadow = "0 0 0 3px var(--color-primary-bg)";
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = "var(--border-medium)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
-        />
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs uppercase tracking-wider font-medium" style={{ color: "var(--text-secondary)" }}>
-          Nombre en la liga <span className="normal-case font-normal" style={{ color: "var(--text-muted)" }}>(opcional)</span>
-        </label>
-        <input
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          maxLength={40}
-          placeholder="Tu apodo"
-          className="w-full rounded-lg px-3 py-2 text-sm placeholder-[#7c7589] outline-none transition-colors"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--border-medium)",
