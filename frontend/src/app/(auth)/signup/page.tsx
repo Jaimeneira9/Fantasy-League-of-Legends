@@ -25,9 +25,9 @@ export default function SignupPage() {
           Crear cuenta
         </h1>
         <p className="text-[#7c7589] text-sm">
-          ¿Ya tenés cuenta?{" "}
+          ¿Ya tienes cuenta?{" "}
           <Link href="/login" className="text-[#6b21e8] font-semibold hover:underline">
-            Iniciá sesión
+            Inicia sesión
           </Link>
         </p>
       </div>

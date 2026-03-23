@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, type PlayerMatchStat, type PlayerSplitHistory, type Split } from "@/lib/api";
 import { RoleIcon, ROLE_COLORS, ROLE_LABEL } from "@/components/RoleIcon";
 import { getRoleColor } from "@/lib/roles";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+gsap.registerPlugin(useGSAP);
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -81,6 +84,8 @@ function LoadingSkeleton() {
 export default function PlayerStatsPage() {
   const { id: leagueId, playerId } = useParams<{ id: string; playerId: string }>();
 
+  const chartRef = useRef<HTMLDivElement>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<PlayerHistoryResponse | null>(null);
@@ -129,13 +134,13 @@ export default function PlayerStatsPage() {
   const matchStats = (historyData?.stats ?? [])
     .filter(s => !selectedSplitId || s.competition_id === selectedSplitId)
     .map((s, i) => ({ ...s, week: i + 1 }));
-  const totalPoints = historyData?.total_points ?? 0;
+  const totalPoints = matchStats.reduce((sum, s) => sum + (s.fantasy_points ?? 0), 0);
 
   const lastMatchPts = matchStats.length > 0 ? matchStats[matchStats.length - 1].fantasy_points : 0;
 
   const roleHex = player ? getRoleColor(player.role) : getRoleColor("coach");
   const roleColor = player ? (ROLE_COLORS[player.role] ?? ROLE_COLORS.coach) : ROLE_COLORS.coach;
-  const photoUrl = player ? getPlayerPhotoUrl(player.name) : "";
+  const photoUrl = player ? (player.image_url ?? getPlayerPhotoUrl(player.name)) : "";
 
   // Selected stat for zona 3
   const selectedStat = matchStats.find((s) => s.week === selectedWeek) ?? null;
@@ -205,6 +210,28 @@ export default function PlayerStatsPage() {
 
   // Bar chart max
   const maxPts = Math.max(...matchStats.map((s) => s.fantasy_points), 1);
+
+  // ---------------------------------------------------------------------------
+  // GSAP: animación del gráfico de barras
+  // ---------------------------------------------------------------------------
+
+  useGSAP(() => {
+    if (matchStats.length === 0) return;
+    gsap.from(".bar-item", {
+      scaleY: 0,
+      transformOrigin: "bottom center",
+      duration: 0.6,
+      ease: "power3.out",
+      stagger: 0.04,
+    });
+    gsap.from(".bar-label", {
+      autoAlpha: 0,
+      y: 8,
+      duration: 0.4,
+      delay: 0.3,
+      stagger: 0.04,
+    });
+  }, { scope: chartRef, dependencies: [selectedSplitId, matchStats.length] });
 
   // ---------------------------------------------------------------------------
   // Loading / error states
@@ -366,14 +393,15 @@ export default function PlayerStatsPage() {
                   <button
                     key={stat.week}
                     onClick={() => setSelectedWeek(stat.week)}
+                    className={`week-chip ${isActive ? "week-chip-active" : "week-chip-inactive"}`}
                     style={{
                       background: isActive ? "#FCD400" : "#1A1A1A",
                       border: `1px solid ${isActive ? "#FCD400" : "#2A2A2A"}`,
                       borderRadius: 8,
                       padding: "6px 14px",
-                      color: isActive ? "#000" : "#555",
+                      color: isActive ? "#000" : "#777",
                       fontSize: 12,
-                      fontWeight: isActive ? 700 : 400,
+                      fontWeight: isActive ? 700 : 500,
                       cursor: "pointer",
                       fontFamily: "'Barlow Condensed', sans-serif",
                       letterSpacing: "0.04em",
@@ -472,118 +500,125 @@ export default function PlayerStatsPage() {
         {/* ================================================================ */}
         {/* ZONA 4: Dos columnas                                             */}
         {/* ================================================================ */}
-        {matchStats.length > 0 && (
-          <div style={{ display: "flex", gap: 20 }}>
+        <div style={{ display: "flex", gap: 20 }}>
 
-            {/* Col izquierda: Bar chart */}
-            <div style={{
-              flex: 1.4,
-              background: "#111111",
-              borderRadius: 12,
-              padding: 20,
-              border: "1px solid #1E1E1E",
-            }}>
-              {/* Selector de splits */}
-              {splits.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="https://kjtifrtuknxtuuiyflza.supabase.co/storage/v1/object/public/FotosEquiposLec/lec.webp"
-                    alt="LEC"
-                    style={{ width: 24, height: 24, borderRadius: 4, objectFit: "contain" }}
-                  />
-                  <select
-                    value={selectedSplitId ?? ""}
-                    onChange={(e) => {
-                      const newId = e.target.value;
-                      setSelectedSplitId(newId);
-                      // Seleccionar la última jornada del nuevo split
-                      const newFiltered = (historyData?.stats ?? [])
-                        .filter(s => s.competition_id === newId);
-                      setSelectedWeek(newFiltered.length > 0 ? newFiltered.length : null);
-                    }}
-                    style={{
-                      background: "rgba(255,255,255,0.07)",
-                      border: "1px solid rgba(252,212,0,0.3)",
-                      color: "var(--text-on-dark)",
-                      borderRadius: 8,
-                      padding: "4px 12px",
-                      fontSize: 12,
-                      fontFamily: "'Space Grotesk', sans-serif",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      outline: "none",
-                    }}
-                  >
-                    {splits.map(split => (
-                      <option key={split.id} value={split.id} style={{ background: "var(--bg-card)" }}>
-                        {split.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Puntos por semana
-                </div>
-                <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
-                  Últimas {matchStats.length} semanas
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 140 }}>
-                {matchStats.map((stat) => {
-                  const isActive = stat.week === selectedWeek;
-                  const heightPx = Math.max((stat.fantasy_points / maxPts) * 110, 2);
+          {/* Col izquierda: Selector de splits + Bar chart */}
+          <div style={{
+            flex: 1.4,
+            background: "#111111",
+            borderRadius: 12,
+            padding: 20,
+            border: "1px solid #1E1E1E",
+          }}>
+            {/* Selector de splits — chips custom */}
+            {splits.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://kjtifrtuknxtuuiyflza.supabase.co/storage/v1/object/public/FotosEquiposLec/lec.webp"
+                  alt="LEC"
+                  style={{ width: 24, height: 24, borderRadius: 4, objectFit: "contain", flexShrink: 0 }}
+                />
+                {splits.map((split) => {
+                  const isActive = split.id === selectedSplitId;
                   return (
-                    <div
-                      key={stat.week}
-                      onClick={() => setSelectedWeek(stat.week)}
-                      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer" }}
+                    <button
+                      key={split.id}
+                      onClick={() => {
+                        setSelectedSplitId(split.id);
+                        const newFiltered = (historyData?.stats ?? [])
+                          .filter(s => s.competition_id === split.id);
+                        setSelectedWeek(newFiltered.length > 0 ? newFiltered.length : null);
+                      }}
+                      style={{
+                        background: isActive ? "#FCD400" : "#1A1A1A",
+                        border: `1px solid ${isActive ? "#FCD400" : "#2A2A2A"}`,
+                        borderRadius: 8,
+                        padding: "6px 14px",
+                        color: isActive ? "#000" : "#777",
+                        fontSize: 12,
+                        fontWeight: isActive ? 700 : 500,
+                        cursor: "pointer",
+                        fontFamily: "'Barlow Condensed', sans-serif",
+                        letterSpacing: "0.04em",
+                      }}
                     >
-                      <span style={{
-                        fontSize: 10,
-                        color: isActive ? "#FCD400" : "#555",
-                        fontFamily: "'Barlow Condensed', sans-serif",
-                        fontWeight: 700,
-                      }}>
-                        {stat.fantasy_points.toFixed(0)}
-                      </span>
-                      <div style={{
-                        width: "100%",
-                        height: `${heightPx}px`,
-                        background: isActive ? "#FCD400" : "#2A2A2A",
-                        borderRadius: "4px 4px 0 0",
-                      }} />
-                      <span style={{
-                        fontSize: 9,
-                        color: isActive ? "#FCD400" : "#333",
-                        fontFamily: "'Barlow Condensed', sans-serif",
-                      }}>
-                        S{stat.week}
-                      </span>
-                    </div>
+                      {split.name}
+                    </button>
                   );
                 })}
               </div>
+            )}
+
+            {matchStats.length > 0 ? (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Puntos por semana
+                  </div>
+                  <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
+                    Últimas {matchStats.length} semanas
+                  </div>
+                </div>
+
+                <div ref={chartRef} style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 140 }}>
+                  {matchStats.map((stat) => {
+                    const isActive = stat.week === selectedWeek;
+                    const heightPx = Math.max((stat.fantasy_points / maxPts) * 110, 2);
+                    return (
+                      <div
+                        key={stat.week}
+                        onClick={() => setSelectedWeek(stat.week)}
+                        style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer" }}
+                      >
+                        <span className="bar-label" style={{
+                          fontSize: 10,
+                          color: isActive ? "#FCD400" : "#555",
+                          fontFamily: "'Barlow Condensed', sans-serif",
+                          fontWeight: 700,
+                        }}>
+                          {stat.fantasy_points.toFixed(0)}
+                        </span>
+                        <div className="bar-item" style={{
+                          width: "100%",
+                          height: `${heightPx}px`,
+                          background: isActive ? "#FCD400" : "#2A2A2A",
+                          borderRadius: "4px 4px 0 0",
+                        }} />
+                        <span style={{
+                          fontSize: 9,
+                          color: isActive ? "#FCD400" : "#333",
+                          fontFamily: "'Barlow Condensed', sans-serif",
+                        }}>
+                          S{stat.week}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 140 }}>
+                <p style={{ color: "#333", fontSize: 13 }}>No hay partidas registradas para este split</p>
+              </div>
+            )}
+          </div>
+
+          {/* Col derecha: Historial de jornadas */}
+          <div style={{
+            flex: 1,
+            background: "#111111",
+            borderRadius: 12,
+            padding: 20,
+            border: "1px solid #1E1E1E",
+            overflowY: "auto",
+            maxHeight: 300,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", fontFamily: "'Space Grotesk', sans-serif", marginBottom: 14 }}>
+              Jornadas
             </div>
 
-            {/* Col derecha: Historial de jornadas */}
-            <div style={{
-              flex: 1,
-              background: "#111111",
-              borderRadius: 12,
-              padding: 20,
-              border: "1px solid #1E1E1E",
-              overflowY: "auto",
-              maxHeight: 300,
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", fontFamily: "'Space Grotesk', sans-serif", marginBottom: 14 }}>
-                Jornadas
-              </div>
-
+            {matchStats.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {[...matchStats].reverse().map((stat) => {
                   const isActive = stat.week === selectedWeek;
@@ -670,17 +705,14 @@ export default function PlayerStatsPage() {
                   );
                 })}
               </div>
-            </div>
-
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}>
+                <p style={{ color: "#333", fontSize: 13 }}>Sin jornadas disponibles</p>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Estado vacío */}
-        {matchStats.length === 0 && (
-          <div style={{ textAlign: "center", padding: "64px 0" }}>
-            <p style={{ color: "#333", fontSize: 14 }}>Sin datos de partidos disponibles aún</p>
-          </div>
-        )}
+        </div>
 
       </main>
     </div>

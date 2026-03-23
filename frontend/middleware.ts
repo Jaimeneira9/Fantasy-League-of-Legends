@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_ROUTES = ["/login", "/signup"];
 const AUTH_REDIRECT = "/login";
 const DEFAULT_PROTECTED = "/dashboard";
+const ONBOARDING_ROUTE = "/onboarding";
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -46,6 +47,18 @@ export async function middleware(request: NextRequest) {
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL(AUTH_REDIRECT, request.url));
   }
+
+  // Onboarding guard: usuario auth sin onboarding completado → /onboarding
+  if (user && !isPublicRoute && pathname !== ONBOARDING_ROUTE) {
+    const onboardingCompleted =
+      user.user_metadata?.onboarding_completed === true;
+    if (!onboardingCompleted) {
+      return NextResponse.redirect(new URL(ONBOARDING_ROUTE, request.url));
+    }
+  }
+
+  // Inyectar x-pathname para que los Server Components puedan leer la ruta actual
+  supabaseResponse.headers.set("x-pathname", pathname);
 
   return supabaseResponse;
 }

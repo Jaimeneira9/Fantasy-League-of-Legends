@@ -19,7 +19,17 @@ export default async function DashboardPage() {
     // backend not available — show empty state
   }
 
-  const displayName = user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "Manager";
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user!.id)
+    .single();
+
+  const displayName =
+    profile?.username ||
+    user?.user_metadata?.full_name ||
+    user?.email?.split("@")[0] ||
+    "Manager";
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>

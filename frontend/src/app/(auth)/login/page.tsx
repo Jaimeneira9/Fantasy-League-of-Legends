@@ -25,9 +25,9 @@ export default function LoginPage() {
           Bienvenido
         </h1>
         <p className="text-[#7c7589] text-sm">
-          ¿No tenés cuenta?{" "}
+          ¿No tienes cuenta?{" "}
           <Link href="/signup" className="text-[#6b21e8] font-semibold hover:underline">
-            Registrate
+            Regístrate
           </Link>
         </p>
       </div>

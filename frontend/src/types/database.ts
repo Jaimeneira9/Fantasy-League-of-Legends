@@ -14,6 +14,29 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string
+          username: string
+          avatar_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          username: string
+          avatar_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          username?: string
+          avatar_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fantasy_leagues: {
         Row: {
           budget: number
@@ -52,7 +75,6 @@ export type Database = {
       }
       league_members: {
         Row: {
-          display_name: string | null
           id: string
           joined_at: string
           league_id: string
@@ -61,7 +83,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          display_name?: string | null
           id?: string
           joined_at?: string
           league_id: string
@@ -70,7 +91,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          display_name?: string | null
           id?: string
           joined_at?: string
           league_id?: string

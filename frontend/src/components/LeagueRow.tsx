@@ -16,10 +16,6 @@ function leagueAccentColor(name: string): string {
 
 export function LeagueRow({ league }: { league: League }) {
   const router = useRouter();
-  const [editingNick, setEditingNick]     = useState(false);
-  const [nick, setNick]                   = useState(league.member?.display_name ?? "");
-  const [saving, setSaving]               = useState(false);
-  const [displayName, setDisplayName]     = useState(league.member?.display_name ?? null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deleting, setDeleting]           = useState(false);
   const [hovered, setHovered]             = useState(false);
@@ -42,17 +38,6 @@ export function LeagueRow({ league }: { league: League }) {
     } finally {
       setDeleting(false);
     }
-  };
-
-  const handleSaveNick = async () => {
-    if (!nick.trim()) return;
-    setSaving(true);
-    try {
-      await api.market.updateNick(league.id, nick.trim());
-      setDisplayName(nick.trim());
-      setEditingNick(false);
-    } catch { /* ignore */ }
-    finally { setSaving(false); }
   };
 
   return (
@@ -96,63 +81,6 @@ export function LeagueRow({ league }: { league: League }) {
             <p className="text-[11px] mt-0.5 font-mono" style={{ color: "var(--text-muted)" }}>
               {league.invite_code}
             </p>
-
-            {/* Nick editor */}
-            {!editingNick ? (
-              <button
-                onClick={() => setEditingNick(true)}
-                className="mt-1.5 flex items-center gap-1.5 group"
-              >
-                <span
-                  className="text-xs"
-                  style={{ color: displayName ? "var(--text-secondary)" : "var(--text-muted)" }}
-                >
-                  {displayName ? `@${displayName}` : <em>Sin nick — toca para añadir</em>}
-                </span>
-                <span
-                  className="text-[10px] transition-colors"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  ✎
-                </span>
-              </button>
-            ) : (
-              <div className="mt-1.5 flex items-center gap-1.5">
-                <input
-                  autoFocus
-                  type="text"
-                  maxLength={32}
-                  value={nick}
-                  onChange={(e) => setNick(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveNick();
-                    if (e.key === "Escape") setEditingNick(false);
-                  }}
-                  placeholder="Tu nick en esta liga"
-                  className="text-xs rounded-lg px-2 py-1 outline-none transition-colors w-36"
-                  style={{
-                    background: "white",
-                    border: "1px solid var(--color-primary)",
-                    color: "var(--text-primary)",
-                  }}
-                />
-                <button
-                  onClick={handleSaveNick}
-                  disabled={saving || !nick.trim()}
-                  className="text-xs px-2 py-1 text-white font-bold rounded-lg transition-all active:scale-95 disabled:opacity-40"
-                  style={{ background: "var(--color-primary)" }}
-                >
-                  {saving ? "…" : "OK"}
-                </button>
-                <button
-                  onClick={() => setEditingNick(false)}
-                  className="text-xs transition-colors"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Right: budget + points */}

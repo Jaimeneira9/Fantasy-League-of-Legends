@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { api, type LeaderboardEntry, type MemberRoster, type League } from "@/lib/api";
 import { RoleIcon, ROLE_COLORS, ROLE_LABEL } from "@/components/RoleIcon";
+
+gsap.registerPlugin(useGSAP);
 
 // ---------------------------------------------------------------------------
 // Modal: equipo de un miembro
@@ -16,6 +20,15 @@ function TeamModal({ leagueId, memberId, memberName, onClose }: {
 }) {
   const [data, setData] = useState<MemberRoster | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     api.leagues.memberRoster(leagueId, memberId)
@@ -25,105 +38,230 @@ function TeamModal({ leagueId, memberId, memberName, onClose }: {
   }, [leagueId, memberId]);
 
   const SLOT_ORDER = ["starter_1","starter_2","starter_3","starter_4","starter_5","coach","bench_1","bench_2"];
+  const starterCount = data ? data.players.filter((rp) => !rp.slot.startsWith("bench")).length : 0;
 
   return (
-    <div
-      className="fixed inset-0 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
-      style={{ background: "rgba(26,28,26,0.5)" }}
-      onClick={onClose}
-    >
-      <div
-        className="rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto animate-slide-up"
-        style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-medium)",
-          boxShadow: "0 8px 40px rgba(26,28,26,0.15)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          className="flex items-center justify-between p-4 border-b"
-          style={{ borderBottomColor: "var(--border-subtle)" }}
-        >
-          <div>
-            <p className="font-bold" style={{ color: "var(--text-primary)" }}>{memberName}</p>
-            {data && (
-              <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
-                <span className="font-mono font-bold" style={{ color: "var(--color-primary)" }}>
-                  {data.member.total_points.toFixed(1)}
-                </span>
-                {" "}pts · {data.players.length} jugadores
-              </p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
-            style={{ color: "var(--text-muted)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}
-          >
-            ✕
-          </button>
-        </div>
+    <>
+      {/* Keyframes de animación */}
+      <style>{`
+        @keyframes tm-fade-scale {
+          from { opacity: 0; transform: scale(0.96); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes tm-slide-up {
+          from { opacity: 0; transform: translateY(100%); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .tm-card-desktop {
+          animation: tm-fade-scale 200ms ease-out both;
+        }
+        .tm-card-mobile {
+          animation: tm-slide-up 280ms ease-out both;
+        }
+        .tm-player-row:hover {
+          background: rgba(255,255,255,0.03) !important;
+        }
+      `}</style>
 
-        {loading ? (
-          <div className="p-6 space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: "var(--bg-surface)" }} />
-            ))}
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+        style={{
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+        }}
+        onClick={onClose}
+      >
+        {/* Card */}
+        <div
+          className={isMobile ? "tm-card-mobile" : "tm-card-desktop"}
+          style={{
+            width: "100%",
+            maxWidth: isMobile ? "100%" : 480,
+            maxHeight: "85vh",
+            overflowY: "auto",
+            background: "#1e1b1e",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+            borderRadius: isMobile ? "20px 20px 0 0" : 20,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              padding: "20px 20px 16px",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <div>
+              {/* Nombre del manager */}
+              <p style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 20,
+                fontWeight: 700,
+                color: "#f5f5f5",
+                lineHeight: 1.2,
+              }}>
+                {memberName}
+              </p>
+              {/* Subtítulo con puntos y titulares */}
+              {data && (
+                <p style={{ marginTop: 4, fontSize: 13, color: "#999" }}>
+                  <span style={{
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "#fcd400",
+                  }}>
+                    {data.member.total_points.toFixed(1)}
+                  </span>
+                  {" "}
+                  <span style={{ color: "#555" }}>pts</span>
+                  {" · "}
+                  {starterCount} titulares
+                </p>
+              )}
+            </div>
+
+            {/* Botón cerrar */}
+            <button
+              onClick={onClose}
+              style={{
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "#666",
+                borderRadius: 8,
+                flexShrink: 0,
+                transition: "color 150ms ease",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#f5f5f5"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#666"; }}
+              aria-label="Cerrar"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+              </svg>
+            </button>
           </div>
-        ) : !data || data.players.length === 0 ? (
-          <div className="p-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>Sin jugadores en el equipo.</div>
-        ) : (
-          <div className="p-4 space-y-2">
-            {[...data.players]
-              .filter((rp) => !rp.slot.startsWith("bench"))
-              .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot))
-              .map((rp, i) => {
-                const p = rp.players;
-                const rc = ROLE_COLORS[p.role] ?? ROLE_COLORS.coach;
-                return (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 border rounded-xl px-4 py-3 transition-all"
-                    style={{
-                      background: "var(--bg-surface)",
-                      borderColor: "var(--border-subtle)",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(252,212,0,0.25)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; }}
-                  >
+
+          {/* Contenido */}
+          {loading ? (
+            <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse"
+                  style={{ height: 60, borderRadius: 10, background: "rgba(255,255,255,0.05)" }}
+                />
+              ))}
+            </div>
+          ) : !data || data.players.length === 0 ? (
+            <div style={{ padding: "40px 20px", textAlign: "center", fontSize: 14, color: "#555" }}>
+              Sin jugadores en el equipo.
+            </div>
+          ) : (
+            <div style={{ padding: "8px 0 16px" }}>
+              {[...data.players]
+                .filter((rp) => !rp.slot.startsWith("bench"))
+                .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot))
+                .map((rp, i, arr) => {
+                  const p = rp.players;
+                  const rc = ROLE_COLORS[p.role] ?? ROLE_COLORS.coach;
+                  const isLast = i === arr.length - 1;
+                  return (
                     <div
-                      className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-                      style={{ background: "var(--bg-panel)" }}
+                      key={i}
+                      className="tm-player-row"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "10px 20px",
+                        borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.05)",
+                        transition: "background 150ms ease",
+                        cursor: "default",
+                      }}
                     >
-                      {p.image_url
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover object-top" />
-                        : <RoleIcon role={p.role} className={`w-5 h-5 ${rc.text}`} />
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>{p.name}</p>
-                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>{p.team}</p>
-                    </div>
-                    <div className={`text-[10px] font-bold px-2 py-0.5 rounded ${rc.bg} ${rc.text} flex-shrink-0`}>
-                      {ROLE_LABEL[p.role] ?? p.role.toUpperCase()}
-                    </div>
-                    <div className="text-right flex-shrink-0 min-w-[56px]">
-                      <p className="font-mono text-sm font-bold" style={{ color: "var(--color-primary)" }}>
+                      {/* Foto circular 44px */}
+                      <div style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                        background: "#141414",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}>
+                        {p.image_url
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={p.image_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                          : <RoleIcon role={p.role} className={`w-5 h-5 ${rc.text}`} />
+                        }
+                      </div>
+
+                      {/* Nombre + equipo */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: "#f5f5f5",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          lineHeight: 1.3,
+                        }}>
+                          {p.name}
+                        </p>
+                        <p style={{ fontSize: 12, color: "#666", lineHeight: 1.3 }}>{p.team}</p>
+                      </div>
+
+                      {/* Badge de rol */}
+                      <span className={`${rc.bg} ${rc.text}`} style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: "0.05em",
+                        textTransform: "uppercase",
+                        padding: "2px 7px",
+                        borderRadius: 20,
+                        flexShrink: 0,
+                      }}>
+                        {ROLE_LABEL[p.role] ?? p.role.toUpperCase()}
+                      </span>
+
+                      {/* Puntos */}
+                      <p style={{
+                        fontFamily: "'Barlow Condensed', sans-serif",
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "#fcd400",
+                        flexShrink: 0,
+                        minWidth: 48,
+                        textAlign: "right",
+                      }}>
                         {(rp.split_points ?? 0).toFixed(1)}
                       </p>
-                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>pts</p>
                     </div>
-                  </div>
-                );
-              })}
-          </div>
-        )}
+                  );
+                })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -165,7 +303,7 @@ function StandingRow({
   onClick: () => void;
 }) {
   const isFirst = entry.rank === 1;
-  const initials = getInitials(entry.display_name);
+  const initials = getInitials(null);
 
   // Styles for the position badge
   const posBadgeStyle: React.CSSProperties = isMe
@@ -256,7 +394,7 @@ function StandingRow({
   };
 
   return (
-    <button style={rowStyle} onClick={onClick}>
+    <button className="standing-row" style={rowStyle} onClick={onClick}>
       {/* POS — 52px */}
       <div style={{ width: 52, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
         <div style={posBadgeStyle}>
@@ -270,7 +408,7 @@ function StandingRow({
         <div style={{ minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={usernameStyle} className="truncate">
-              {entry.display_name ?? "Manager"}
+              {"Manager"}
             </span>
             {isMe && (
               <span
@@ -320,6 +458,21 @@ export default function StandingsPage() {
   const [error, setError]           = useState<string | null>(null);
   const [myMemberId, setMyMemberId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<{ id: string; name: string } | null>(null);
+  const rowsRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!entries.length) return;
+      gsap.from(".standing-row", {
+        autoAlpha: 0,
+        y: 20,
+        duration: 0.5,
+        ease: "power2.out",
+        stagger: 0.06,
+      });
+    },
+    { scope: rowsRef, dependencies: [entries] }
+  );
 
   useEffect(() => {
     Promise.all([
@@ -452,14 +605,14 @@ export default function StandingsPage() {
             </div>
 
             {/* Rows */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div ref={rowsRef} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {entries.map((e) => (
                 <StandingRow
                   key={e.member_id}
                   entry={e}
                   isMe={e.member_id === myMemberId}
                   weekPoints={null}
-                  onClick={() => setSelectedMember({ id: e.member_id, name: e.display_name ?? "Manager" })}
+                  onClick={() => setSelectedMember({ id: e.member_id, name: e.username ?? "Manager" })}
                 />
               ))}
             </div>

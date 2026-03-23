@@ -120,7 +120,30 @@ export default function Sidebar({ leagueId, leagueName }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-[#1e1e1e]">
+      <div className="p-4 border-t border-[#1e1e1e] space-y-1">
+        <Link
+          href="/profile"
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
+            pathname === "/profile"
+              ? "text-[var(--color-primary)]"
+              : "text-white/30 hover:text-[var(--color-primary)]"
+          }`}
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+            />
+          </svg>
+          Mi perfil
+        </Link>
         <Link
           href="/dashboard"
           className="flex items-center gap-2 px-3 py-2 text-xs text-white/30 hover:text-[var(--color-primary)] transition-colors"

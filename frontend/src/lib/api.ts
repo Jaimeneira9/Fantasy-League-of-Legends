@@ -57,7 +57,7 @@ export type Listing = {
 export type LeaderboardEntry = {
   rank: number;
   member_id: string;
-  display_name: string | null;
+  username: string | null;
   total_points: number;
   remaining_budget: number;
   player_count: number;
@@ -128,7 +128,7 @@ export type League = {
   budget: number;
   competition: string;
   is_active: boolean;
-  member: { id: string; remaining_budget: number; total_points: number; display_name: string | null } | null;
+  member: { id: string; remaining_budget: number; total_points: number } | null;
 };
 
 export type Slot =
@@ -184,7 +184,7 @@ export type Roster = {
 // ---------------------------------------------------------------------------
 
 export type MemberRoster = {
-  member: { id: string; display_name: string | null; total_points: number };
+  member: { id: string; total_points: number };
   players: { slot: string; price_paid: number; split_points: number; players: { id: string; name: string; team: string; role: string; image_url: string | null } }[];
 };
 
@@ -197,10 +197,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ name, max_members: maxMembers }),
       }),
-    join: (inviteCode: string, displayName?: string) =>
+    join: (inviteCode: string) =>
       req("/leagues/join", {
         method: "POST",
-        body: JSON.stringify({ invite_code: inviteCode, display_name: displayName || null }),
+        body: JSON.stringify({ invite_code: inviteCode }),
       }),
     delete: (id: string) => req(`/leagues/${id}`, { method: "DELETE" }),
     memberRoster: (leagueId: string, memberId: string) =>
@@ -245,11 +245,6 @@ export const api = {
       req(`/market/${leagueId}/sell-offers/${offerId}/reject`, { method: "POST" }),
     candidates: (leagueId: string) =>
       req<Candidate[]>(`/market/${leagueId}/candidates`),
-    updateNick: (leagueId: string, displayName: string) =>
-      req(`/leagues/${leagueId}/me`, {
-        method: "PATCH",
-        body: JSON.stringify({ display_name: displayName }),
-      }),
   },
   scoring: {
     leaderboard: (leagueId: string) =>
