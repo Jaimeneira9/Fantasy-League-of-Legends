@@ -10,7 +10,7 @@ import { ROLE_LABEL } from "@/components/RoleIcon";
 import { getTeamBadgeUrl } from "@/components/PlayerCard";
 import { getRoleColor } from "@/lib/roles";
 import { PriceTrend } from "@/components/PriceTrend";
-import PlayerStatsModal from "@/components/PlayerStatsModal";
+import { PlayerStatsModal } from "@/components/PlayerStatsModal";
 
 // ---------------------------------------------------------------------------
 // Types

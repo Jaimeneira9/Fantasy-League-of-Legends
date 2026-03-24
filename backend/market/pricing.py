@@ -6,6 +6,9 @@ Cap: -10% / +15% diario.
 Updates: post-partido y cron a medianoche.
 """
 
+MAX_PRICE_INCREASE = 0.15
+MAX_PRICE_DECREASE = 0.10
+
 
 def calculate_new_price(
     current_price: float,
