@@ -14,7 +14,7 @@ ROLE_WEIGHTS: dict[Role, dict[str, float]] = {
     "top": {
         "kills": 2.0,
         "deaths": -1.5,
-        "assists": 4.0,
+        "assists": 2.0,
         "cs_per_min": 0.5,
         "gold_diff_15": 0.015,
         "damage_share": 5.0,
@@ -23,7 +23,7 @@ ROLE_WEIGHTS: dict[Role, dict[str, float]] = {
     "jungle": {
         "kills": 2.5,
         "deaths": -2.0,
-        "assists": 3.0,
+        "assists": 2.0,
         "cs_per_min": 0.5,
         "gold_diff_15": 0.010,
         "damage_share": 5.0,
@@ -33,7 +33,7 @@ ROLE_WEIGHTS: dict[Role, dict[str, float]] = {
     "mid": {
         "kills": 2.0,
         "deaths": -1.5,
-        "assists": 4.0,
+        "assists": 2.0,
         "cs_per_min": 0.5,
         "gold_diff_15": 0.015,
         "damage_share": 10.0,
