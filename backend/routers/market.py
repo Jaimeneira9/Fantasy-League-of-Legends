@@ -290,23 +290,21 @@ async def buy_player(
         "clause_amount": ask_price,
     }).execute()
 
-    # Deduct buyer budget
-    supabase.table("league_members").update({
-        "remaining_budget": float(member["remaining_budget"]) - float(listing["ask_price"])
-    }).eq("id", member["id"]).execute()
+    # Deduct buyer budget (atomic — verifica y descuenta en una sola transacción)
+    result = supabase.rpc("deduct_budget", {
+        "p_member_id": member["id"],
+        "p_amount": float(ask_price)
+    }).execute()
 
-    # Pay seller (if not a system listing)
+    if not result.data:
+        raise HTTPException(status_code=400, detail="Presupuesto insuficiente")
+
+    # Pay seller (if not a system listing) — atómico, sin read-modify-write
     if listing["seller_id"]:
-        seller_resp = (
-            supabase.table("league_members")
-            .select("remaining_budget")
-            .eq("id", listing["seller_id"])
-            .execute()
-        )
-        if seller_resp.data:
-            supabase.table("league_members").update({
-                "remaining_budget": float(seller_resp.data[0]["remaining_budget"]) + float(listing["ask_price"])
-            }).eq("id", listing["seller_id"]).execute()
+        supabase.rpc("add_budget", {
+            "p_member_id": listing["seller_id"],
+            "p_amount": float(ask_price)
+        }).execute()
 
     # Mark listing sold
     supabase.table("market_listings").update({"status": "sold"}).eq("id", str(body.listing_id)).execute()
@@ -613,13 +611,6 @@ async def activate_clause(
     clause_amount = float(rp["clause_amount"])
     player_id: str = rp["player_id"]
 
-    # Validar presupuesto del comprador
-    if float(buyer_member["remaining_budget"]) < clause_amount:
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Presupuesto insuficiente para activar la cláusula",
-        )
-
     # Obtener precio actual del jugador (para la nueva cláusula)
     player_resp = (
         supabase.table("players")
@@ -671,22 +662,23 @@ async def activate_clause(
     new_clause_expires = (now + timedelta(days=14)).isoformat()
 
     # Ejecutar transferencia
-    # 1. Descontar presupuesto al comprador
-    supabase.table("league_members").update({
-        "remaining_budget": float(buyer_member["remaining_budget"]) - clause_amount
-    }).eq("id", buyer_member["id"]).execute()
+    # 1. Descuento atómico — verifica y descuenta en una sola transacción
+    result = supabase.rpc("deduct_budget", {
+        "p_member_id": buyer_member["id"],
+        "p_amount": clause_amount
+    }).execute()
 
-    # 2. Acreditar al vendedor (propietario actual)
-    seller_budget_resp = (
-        supabase.table("league_members")
-        .select("remaining_budget")
-        .eq("id", owner_member_id)
-        .execute()
-    )
-    if seller_budget_resp.data:
-        supabase.table("league_members").update({
-            "remaining_budget": float(seller_budget_resp.data[0]["remaining_budget"]) + clause_amount
-        }).eq("id", owner_member_id).execute()
+    if not result.data:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Presupuesto insuficiente para activar la cláusula",
+        )
+
+    # 2. Acreditar al vendedor (propietario actual) — atómico, sin read-modify-write
+    supabase.rpc("add_budget", {
+        "p_member_id": owner_member_id,
+        "p_amount": clause_amount
+    }).execute()
 
     # 3. Eliminar del roster actual
     supabase.table("roster_players").delete().eq("id", roster_player_id).execute()
@@ -746,11 +738,6 @@ async def upgrade_clause(
         )
 
     amount = float(body.amount)
-    if float(member["remaining_budget"]) < amount:
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Presupuesto insuficiente para subir la cláusula",
-        )
 
     now = datetime.now(timezone.utc)
 
@@ -768,10 +755,17 @@ async def upgrade_clause(
     current_clause = float(rp.get("clause_amount") or 0)
     new_clause = current_clause + amount * 0.5
 
-    # Descontar presupuesto
-    supabase.table("league_members").update({
-        "remaining_budget": float(member["remaining_budget"]) - amount
-    }).eq("id", member["id"]).execute()
+    # Descuento atómico — verifica y descuenta en una sola transacción
+    result = supabase.rpc("deduct_budget", {
+        "p_member_id": member["id"],
+        "p_amount": amount
+    }).execute()
+
+    if not result.data:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Presupuesto insuficiente para subir la cláusula",
+        )
 
     # Actualizar cláusula; si no existía, setear también clause_expires_at
     update_payload: dict = {"clause_amount": new_clause}
