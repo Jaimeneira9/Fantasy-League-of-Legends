@@ -572,15 +572,23 @@ async def activate_clause(
     """Activa la cláusula de rescisión: paga el importe y ficha al jugador."""
     buyer_member = _get_member(supabase, league_id, user["id"])
 
-    # Fetch roster_player con join a rosters para obtener el member_id del propietario
+    # Fetch roster_player con join a rosters → league_members para verificar que
+    # el jugador pertenece a la liga del parámetro de ruta (previene cross-league exploit)
     rp_resp = (
         supabase.table("roster_players")
-        .select("id, player_id, clause_expires_at, clause_amount, rosters(member_id)")
+        .select("id, player_id, clause_expires_at, clause_amount, rosters(member_id, league_members(league_id))")
         .eq("id", roster_player_id)
+        .eq("rosters.league_members.league_id", league_id)
         .execute()
     )
     rp = rp_resp.data[0] if rp_resp.data else None
     if not rp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jugador no encontrado")
+
+    # Validar que el jugador pertenece a esta liga (defensa en profundidad contra
+    # el caso en que PostgREST devuelva el row con el join nulo en vez de excluirlo)
+    owner_league_id = (rp["rosters"].get("league_members") or {}).get("league_id")
+    if owner_league_id != league_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jugador no encontrado")
 
     owner_member_id: str = rp["rosters"]["member_id"]
