@@ -15,7 +15,7 @@ def test_mid_basic_stats():
 def test_adc_basic_stats():
     stats = {"kills": 8, "deaths": 1, "assists": 2, "cs_per_min": 10.0, "damage_share": 0.35}
     pts = calculate_match_points(stats, "adc", 25.0)
-    expected = 8 * 2.0 + 1 * (-1.5) + 2 * 0.75 + 10.0 * 0.75 + 0.35 * 10.0
+    expected = 8 * 2.0 + 1 * (-1.5) + 2 * 1.5 + 10.0 * 0.75 + 0.35 * 15.0
     assert pts == round(expected, 2)
 
 

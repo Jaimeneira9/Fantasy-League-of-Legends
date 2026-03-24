@@ -42,10 +42,10 @@ ROLE_WEIGHTS: dict[Role, dict[str, float]] = {
     "adc": {
         "kills": 2.0,
         "deaths": -1.5,
-        "assists": 0.75,
+        "assists": 1.5,
         "cs_per_min": 0.75,
         "gold_diff_15": 0.010,
-        "damage_share": 10.0,
+        "damage_share": 15.0,
         "xp_diff_15": 0.005,
     },
     "support": {
