@@ -1030,15 +1030,6 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
       return sortDir === "desc" ? -diff : diff;
     });
 
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-    } else {
-      setSortField(field);
-      setSortDir("desc");
-    }
-  };
-
   if (loading) return <ListSkeleton rows={8} />;
   if (error)   return <ErrorState message={error} onRetry={load} />;
 
