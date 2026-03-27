@@ -268,7 +268,7 @@ def print_section(title: str, players_info: list):
 def main():
     print()
     print("╔══════════════════════════════════════════════════════════════════════════════╗")
-    print("║           LOLFantasy — Análisis de Tiers: Stat vs Stat                     ║")
+    print("║       Summoner's Fantasy — Análisis de Tiers: Stat vs Stat                 ║")
     print("╚══════════════════════════════════════════════════════════════════════════════╝")
 
     print_section("COMPARACIÓN 1 — SUPPORTS: Tier S vs Tier B", SUPPORTS)

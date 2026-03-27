@@ -58,7 +58,7 @@ export default async function DashboardPage() {
             className="font-black tracking-tight text-base"
             style={{ color: "var(--color-primary)", fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            LOL Fantasy
+            Summoner's Fantasy
           </span>
         </div>
         <div className="flex items-center gap-3">

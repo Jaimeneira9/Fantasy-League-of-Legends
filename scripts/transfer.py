@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI de gestión de jugadores para LOLFantasy.
+CLI de gestión de jugadores para Summoner's Fantasy.
 
 Uso:
   python scripts/transfer.py transfer --player "Jackies" --team "Team Heretics"
@@ -234,7 +234,7 @@ def cmd_release(args: argparse.Namespace, sb: Client) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="CLI de gestión de jugadores para LOLFantasy.",
+        description="CLI de gestión de jugadores para Summoner's Fantasy.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest="command", required=True)

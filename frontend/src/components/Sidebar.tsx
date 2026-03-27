@@ -110,6 +110,15 @@ export default function Sidebar({ leagueId, leagueName }: SidebarProps) {
           <span>Clasificación</span>
         </Link>
 
+        {/* Equipos */}
+        <Link
+          href={`/leagues/${leagueId}/teams`}
+          className={itemClass(pathname.includes("/teams"))}
+        >
+          <span className="material-symbols-outlined text-xl">shield</span>
+          <span>Equipos</span>
+        </Link>
+
         {/* Actividad */}
         <Link
           href={`/leagues/${leagueId}/activity`}

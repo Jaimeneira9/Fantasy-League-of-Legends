@@ -1,4 +1,4 @@
-# LOLFantasy — Instrucciones del proyecto
+# Summoner's Fantasy — Instrucciones del proyecto
 
 ## Delegación obligatoria (NO negociable)
 

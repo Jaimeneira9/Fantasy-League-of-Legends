@@ -1,4 +1,4 @@
-# 🏆 LOLFantasy
+# 🏆 Summoner's Fantasy
 
 > A fully automated fantasy esports platform for the **LEC** (League of Legends EMEA Championship) — built with real match data, auction-based markets, and role-weighted scoring.
 
@@ -111,7 +111,7 @@ This project is built with a fully **agentic development workflow** — not just
 
 Most "AI-assisted" development is just prompt-and-paste: you describe something, the AI writes code, you copy it in, things break, you prompt again. There is no memory, no architectural coherence, no learning. The AI forgets everything between sessions.
 
-LOLFantasy was built differently.
+Summoner's Fantasy was built differently.
 
 ### The Stack
 
@@ -180,8 +180,8 @@ This is what it looks like to use AI as **Jarvis**, not as Stack Overflow.
 ### 1. Clone & Configure
 
 ```bash
-git clone https://github.com/your-username/LOLFantasy.git
-cd LOLFantasy
+git clone https://github.com/your-username/Summoners_Fantasy.git
+cd Summoners_Fantasy
 ```
 
 ### 2. Backend Setup
@@ -254,7 +254,7 @@ curl -s -X POST http://localhost:8000/debug/series-ingest | jq
 ## 📁 Project Structure
 
 ```
-LOLFantasy/
+Summoners_Fantasy/
 ├── backend/
 │   ├── main.py                  # FastAPI app, lifespan, scheduler setup
 │   ├── auth/                    # JWT dependency injection

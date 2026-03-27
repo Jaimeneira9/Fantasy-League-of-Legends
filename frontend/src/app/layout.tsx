@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "LoL Fantasy",
-  description: "Fantasy League of Legends — LEC",
+  title: "Summoner's Fantasy",
+  description: "Summoner's Fantasy — LEC Esports Fantasy League",
 };
 
 export default function RootLayout({

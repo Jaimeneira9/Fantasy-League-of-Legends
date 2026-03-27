@@ -14,7 +14,7 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 CARGO_API = "https://lol.fandom.com/api.php"
-HEADERS = {"User-Agent": "LOLFantasy/1.0 (fantasy league project)"}
+HEADERS = {"User-Agent": "SummonersFantasy/1.0 (fantasy league project)"}
 REQUEST_DELAY_S = 1.5
 MAX_RETRIES = 3
 

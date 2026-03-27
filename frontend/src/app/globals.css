@@ -179,3 +179,18 @@ input[type="number"] {
 .animate-sheet-up {
   animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+@keyframes cascadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-cascade-in {
+  animation: cascadeIn 300ms ease-out both;
+}
