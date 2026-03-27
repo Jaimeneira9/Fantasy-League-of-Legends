@@ -15,18 +15,29 @@ export default function SignupPage() {
       <div className="mb-8">
         {/* Logo mobile */}
         <div className="flex items-center gap-2 mb-8 lg:hidden">
-          <div className="w-8 h-8 bg-[#6b21e8] rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-base">military_tech</span>
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: "#FCD400" }}
+          >
+            <span className="material-symbols-outlined text-base" style={{ color: "#111111" }}>military_tech</span>
           </div>
-          <span className="font-display font-black text-[#1a1c1a] text-lg tracking-tight uppercase">LOLFantasy</span>
+          <span
+            className="font-black text-lg tracking-tight uppercase"
+            style={{ color: "#FCD400", fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            Summoner's Fantasy
+          </span>
         </div>
 
-        <h1 className="font-display font-black text-3xl text-[#1a1c1a] uppercase tracking-tight mb-2">
+        <h1
+          className="font-black text-3xl uppercase tracking-tight mb-2"
+          style={{ color: "#F0E8D0", fontFamily: "'Space Grotesk', sans-serif" }}
+        >
           Crear cuenta
         </h1>
-        <p className="text-[#7c7589] text-sm">
+        <p className="text-sm" style={{ color: "#555555" }}>
           ¿Ya tienes cuenta?{" "}
-          <Link href="/login" className="text-[#6b21e8] font-semibold hover:underline">
+          <Link href="/login" className="font-semibold hover:underline" style={{ color: "#FCD400" }}>
             Inicia sesión
           </Link>
         </p>
@@ -34,7 +45,10 @@ export default function SignupPage() {
 
       {/* Error block */}
       {state?.error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+        <div
+          className="mb-4 p-3 rounded-lg text-sm"
+          style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444" }}
+        >
           {state.error}
         </div>
       )}
@@ -45,8 +59,9 @@ export default function SignupPage() {
           {/* Email */}
           <div>
             <label
-              className="block text-xs font-semibold text-[#4a4456] uppercase tracking-wider mb-1.5"
+              className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
               htmlFor="email"
+              style={{ color: "#888888", fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Email
             </label>
@@ -56,7 +71,15 @@ export default function SignupPage() {
               name="email"
               required
               autoComplete="email"
-              className="w-full px-4 py-3 bg-white border border-[rgba(26,28,26,0.15)] rounded-xl text-[#1a1c1a] placeholder-[#7c7589] text-sm focus:outline-none focus:border-[#6b21e8] focus:ring-2 focus:ring-[#6b21e8]/10 transition-all"
+              className="w-full px-4 py-3 text-sm transition-all focus:outline-none"
+              style={{
+                background: "#1A1A1A",
+                border: "1px solid #2A2A2A",
+                borderRadius: "8px",
+                color: "#F0E8D0",
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "#FCD400")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "#2A2A2A")}
               placeholder="tu@email.com"
             />
           </div>
@@ -64,8 +87,9 @@ export default function SignupPage() {
           {/* Contraseña */}
           <div>
             <label
-              className="block text-xs font-semibold text-[#4a4456] uppercase tracking-wider mb-1.5"
+              className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
               htmlFor="password"
+              style={{ color: "#888888", fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Contraseña
             </label>
@@ -76,7 +100,15 @@ export default function SignupPage() {
               required
               autoComplete="new-password"
               minLength={6}
-              className="w-full px-4 py-3 bg-white border border-[rgba(26,28,26,0.15)] rounded-xl text-[#1a1c1a] placeholder-[#7c7589] text-sm focus:outline-none focus:border-[#6b21e8] focus:ring-2 focus:ring-[#6b21e8]/10 transition-all"
+              className="w-full px-4 py-3 text-sm transition-all focus:outline-none"
+              style={{
+                background: "#1A1A1A",
+                border: "1px solid #2A2A2A",
+                borderRadius: "8px",
+                color: "#F0E8D0",
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "#FCD400")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "#2A2A2A")}
               placeholder="Mínimo 6 caracteres"
             />
           </div>
@@ -95,9 +127,17 @@ function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: st
     <button
       type="submit"
       disabled={pending}
-      className={`w-full bg-[#6b21e8] hover:bg-[#5100bd] text-white font-semibold py-3 px-6 rounded-xl transition-all active:scale-95 text-sm ${
-        pending ? "opacity-60 cursor-not-allowed" : ""
-      }`}
+      className="w-full py-3 px-6 text-sm font-bold transition-all active:scale-95"
+      style={{
+        background: pending ? "#b89e00" : "#FCD400",
+        color: "#111111",
+        borderRadius: "8px",
+        fontFamily: "'Space Grotesk', sans-serif",
+        opacity: pending ? 0.7 : 1,
+        cursor: pending ? "not-allowed" : "pointer",
+      }}
+      onMouseEnter={(e) => { if (!pending) e.currentTarget.style.background = "#e6c000"; }}
+      onMouseLeave={(e) => { if (!pending) e.currentTarget.style.background = "#FCD400"; }}
     >
       {pending ? pendingLabel : label}
     </button>
