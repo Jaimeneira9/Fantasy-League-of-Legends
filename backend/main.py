@@ -15,7 +15,7 @@ from supabase import create_client, Client
 
 from auth.dependencies import get_current_user, get_supabase
 
-logger = logging.getLogger("lolfantasy")
+logger = logging.getLogger("summonersFantasy")
 logging.basicConfig(level=logging.INFO)
 
 _scheduler = BackgroundScheduler()
@@ -90,10 +90,10 @@ async def lifespan(app: FastAPI):
     logger.info("Background scheduler stopped")
 
 
-from routers import players, leagues, market, scoring, trades, roster, activity, bids
+from routers import players, leagues, market, scoring, trades, roster, activity, bids, teams as teams_router
 from routers import splits as splits_router
 
-app = FastAPI(title="LoL Fantasy API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Summoner's Fantasy API", version="0.1.0", lifespan=lifespan)
 
 _raw_origins = os.environ.get(
     "ALLOWED_ORIGINS",
@@ -132,6 +132,7 @@ app.include_router(roster.router,       prefix="/roster",    tags=["roster"])
 app.include_router(activity.router,     prefix="/activity",  tags=["activity"])
 app.include_router(bids.router,         prefix="/bids",      tags=["bids"])
 app.include_router(splits_router.router,prefix="/splits",    tags=["splits"])
+app.include_router(teams_router.router,  prefix="/teams",     tags=["teams"])
 
 
 @app.get("/health")
