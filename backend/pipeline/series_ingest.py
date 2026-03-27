@@ -586,16 +586,19 @@ async def _process_series(
     series_entries: list[GameEntry],
     team_home_id: str,
     team_away_id: str,
-) -> None:
+) -> set[str]:
     """
     Procesa todos los games de una serie:
     - Upsert series
     - Procesa cada game en orden
     - Calcula stats de serie
     - Actualiza series con winner y game_count
+
+    Returns:
+        Set de player_ids procesados en esta serie.
     """
     if not series_entries:
-        return
+        return set()
 
     first = series_entries[0]
     series_id = _upsert_series(
@@ -613,7 +616,7 @@ async def _process_series(
             first.team_away,
             first.date,
         )
-        return
+        return set()
 
     # Acumulador: player_id → [(PlayerRawStats, game_points, duration_min), ...]
     series_player_stats: dict[str, list[tuple[PlayerRawStats, float, float]]] = defaultdict(list)
@@ -680,6 +683,8 @@ async def _process_series(
         total_games,
         series_winner_id,
     )
+
+    return set(series_player_stats.keys())
 
 
 # ---------------------------------------------------------------------------
@@ -760,6 +765,7 @@ async def run_series_ingest(supabase: Client) -> None:
     logger.info("Grouped into %d series", len(series_map))
 
     # 4. Procesar cada serie
+    processed_player_ids: set[str] = set()
     for (team_home_name, team_away_name, game_date), entries in series_map.items():
         # Resolver IDs de equipos
         team_home_id = _resolve_team_by_alias(supabase, team_home_name)
@@ -777,13 +783,14 @@ async def run_series_ingest(supabase: Client) -> None:
             continue
 
         try:
-            await _process_series(
+            series_player_ids = await _process_series(
                 supabase,
                 competition_id=competition_id,
                 series_entries=entries,
                 team_home_id=team_home_id,
                 team_away_id=team_away_id,
             )
+            processed_player_ids.update(series_player_ids)
             await asyncio.sleep(1)
         except Exception as exc:
             logger.error(
@@ -795,5 +802,17 @@ async def run_series_ingest(supabase: Client) -> None:
                 exc_info=True,
             )
             # Continuamos con la siguiente serie en lugar de abortar todo
+
+    # 5. Actualizar precios post-serie para todos los jugadores procesados
+    if processed_player_ids:
+        try:
+            from market.price_updater import update_player_prices_post_series
+            update_player_prices_post_series(supabase, list(processed_player_ids))
+        except Exception as exc:
+            logger.error(
+                "Price update failed after series ingest (non-blocking): %s",
+                exc,
+                exc_info=True,
+            )
 
     logger.info("Series ingest pipeline complete")
