@@ -911,6 +911,41 @@ function OfferRow({ offer, leagueId, onAction }: { offer: SellOffer; leagueId: s
         >
           {expiresIn > 0 ? `${expiresIn}d` : "hoy"}
         </p>
+        {offer.offer_type === "manager" ? (
+          <span
+            style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: 10,
+              fontWeight: 700,
+              color: "#FCD400",
+              background: "rgba(252,212,0,0.10)",
+              border: "1px solid rgba(252,212,0,0.25)",
+              borderRadius: 4,
+              padding: "1px 5px",
+              display: "inline-block",
+              marginTop: 2,
+            }}
+          >
+            Manager{offer.from_username ? ` · ${offer.from_username}` : ""}
+          </span>
+        ) : (
+          <span
+            style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: 10,
+              fontWeight: 600,
+              color: "#555555",
+              background: "#1A1A1A",
+              border: "1px solid #2A2A2A",
+              borderRadius: 4,
+              padding: "1px 5px",
+              display: "inline-block",
+              marginTop: 2,
+            }}
+          >
+            Liga
+          </span>
+        )}
       </div>
       {err && <span className="text-red-500 text-xs">{err}</span>}
       <div className="flex gap-2 flex-shrink-0">
@@ -973,18 +1008,19 @@ type SortDir = "asc" | "desc";
 
 function ScoutTab({ leagueId }: { leagueId: string }) {
   const router = useRouter();
-  const [players, setPlayers]       = useState<ScoutPlayer[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [teamFilter, setTeamFilter] = useState<string>("all");
-  const [sortField, setSortField]   = useState<SortField>("total_points");
-  const [sortDir, setSortDir]       = useState<SortDir>("desc");
+  const [players, setPlayers]           = useState<ScoutPlayer[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState<string | null>(null);
+  const [roleFilter, setRoleFilter]     = useState<string>("all");
+  const [teamFilter, setTeamFilter]     = useState<string>("all");
+  const [sortField, setSortField]       = useState<SortField>("total_points");
+  const [sortDir, setSortDir]           = useState<SortDir>("desc");
+  const [animationKey, setAnimationKey] = useState(0);
 
   const load = useCallback(() => {
     setLoading(true);
     api.players.scout(leagueId)
-      .then(setPlayers)
+      .then((data) => { setPlayers(data); setAnimationKey((k) => k + 1); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [leagueId]);
@@ -1045,7 +1081,7 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
             return (
               <button
                 key={r}
-                onClick={() => setRoleFilter(r)}
+                onClick={() => { setRoleFilter(r); setAnimationKey((k) => k + 1); }}
                 className="px-3 py-1.5 text-xs transition-all duration-150 active:scale-95"
                 style={{
                   fontFamily: "'Space Grotesk', sans-serif",
@@ -1067,7 +1103,7 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
           {/* Dropdown de equipo */}
           <select
             value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
+            onChange={(e) => { setTeamFilter(e.target.value); setAnimationKey((k) => k + 1); }}
             className="text-xs outline-none"
             style={{
               background: "#1A1A1A",
@@ -1090,7 +1126,7 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
           <div className="flex items-center gap-1 ml-auto">
             <select
               value={sortField}
-              onChange={(e) => { setSortField(e.target.value as SortField); setSortDir("desc"); }}
+              onChange={(e) => { setSortField(e.target.value as SortField); setSortDir("desc"); setAnimationKey((k) => k + 1); }}
               className="text-xs outline-none"
               style={{
                 background: "#1A1A1A",
@@ -1109,7 +1145,7 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
               ))}
             </select>
             <button
-              onClick={() => setSortDir((d) => (d === "desc" ? "asc" : "desc"))}
+              onClick={() => { setSortDir((d) => (d === "desc" ? "asc" : "desc")); setAnimationKey((k) => k + 1); }}
               className="transition-all active:scale-95"
               style={{
                 background: "#1A1A1A",
@@ -1153,10 +1189,11 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
             <span style={{ flex: 1 }}>Jugador</span>
           </div>
 
-          {filtered.map((p) => (
+          {filtered.map((p, index) => (
             <ScoutRow
-              key={p.id}
+              key={`${animationKey}-${p.id}`}
               player={p}
+              animationDelay={index * 60}
               onOpen={() => router.push(`/leagues/${leagueId}/stats/${p.id}`)}
             />
           ))}
@@ -1167,7 +1204,7 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
   );
 }
 
-function ScoutRow({ player: p, onOpen }: { player: ScoutPlayer; onOpen: () => void }) {
+function ScoutRow({ player: p, animationDelay, onOpen }: { player: ScoutPlayer; animationDelay: number; onOpen: () => void }) {
   const roleColorHex = getRoleColor(p.role);
   const kdaVal = p.total_deaths > 0
     ? (p.total_kills + p.total_assists) / p.total_deaths
@@ -1177,7 +1214,8 @@ function ScoutRow({ player: p, onOpen }: { player: ScoutPlayer; onOpen: () => vo
     <button
       type="button"
       onClick={onOpen}
-      className="w-full text-left group"
+      className="w-full text-left group animate-cascade-in"
+      style={{ animationDelay: `${animationDelay}ms` }}
     >
       <div
         className="flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-150"
@@ -1245,6 +1283,37 @@ function ScoutRow({ player: p, onOpen }: { player: ScoutPlayer; onOpen: () => vo
                 }}
               >
                 @{p.owner_name}
+              </span>
+            )}
+            {/* Clause badge */}
+            {p.owner_name && p.clause_amount != null && p.clause_expires_at != null && new Date(p.clause_expires_at).getTime() > Date.now() && (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
+                style={{
+                  background: "#2A2000",
+                  color: "#FCD400",
+                  border: "1px solid #4A3A00",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                }}
+              >
+                🔒 {p.clause_amount.toFixed(0)}M
+              </span>
+            )}
+            {/* EN VENTA badge */}
+            {p.for_sale && (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 flex-shrink-0"
+                style={{
+                  background: "rgba(252,212,0,0.12)",
+                  border: "1px solid rgba(252,212,0,0.3)",
+                  color: "#FCD400",
+                  fontSize: 10,
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                }}
+              >
+                EN VENTA
               </span>
             )}
           </div>

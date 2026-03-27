@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-import { api, type LeaderboardEntry, type MemberRoster, type League } from "@/lib/api";
+import {
+  api,
+  type LeaderboardEntry,
+  type DetailedLeaderboardEntry,
+  type MemberStats,
+  type MemberRoster,
+  type League,
+} from "@/lib/api";
 import { RoleIcon, ROLE_COLORS, ROLE_LABEL } from "@/components/RoleIcon";
 
-gsap.registerPlugin(useGSAP);
+// ---------------------------------------------------------------------------
+// Sort types
+// ---------------------------------------------------------------------------
+type SortKey = "total_points" | "avg_pts_per_week";
 
 // ---------------------------------------------------------------------------
 // Modal: equipo de un miembro
@@ -289,17 +297,115 @@ function DeltaBadge({ value }: { value: number | null }) {
 }
 
 // ---------------------------------------------------------------------------
+// SortableHeader inline component
+// ---------------------------------------------------------------------------
+function SortableHeader({
+  label,
+  sortKey,
+  activeSortKey,
+  sortDir,
+  onSort,
+  width,
+  hideOnMobile = false,
+}: {
+  label: string;
+  sortKey: SortKey;
+  activeSortKey: SortKey;
+  sortDir: "asc" | "desc";
+  onSort: (key: SortKey) => void;
+  width: number;
+  hideOnMobile?: boolean;
+}) {
+  const isActive = activeSortKey === sortKey;
+  const headerStyle: React.CSSProperties = {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    color: isActive ? "#FCD400" : "#333333",
+    textTransform: "uppercase",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 3,
+    cursor: "pointer",
+    userSelect: "none",
+  };
+
+  return (
+    <div
+      style={{ width, flexShrink: 0, textAlign: "right" }}
+      className={hideOnMobile ? "hidden sm:block" : undefined}
+    >
+      <button style={headerStyle} onClick={() => onSort(sortKey)}>
+        {label}
+        {/* Chevron SVG */}
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 8 8"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ opacity: isActive ? 1 : 0.3 }}
+        >
+          {isActive && sortDir === "asc" ? (
+            <path d="M4 2L7 6H1L4 2Z" fill="currentColor" />
+          ) : (
+            <path d="M4 6L1 2H7L4 6Z" fill="currentColor" />
+          )}
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Stat cell helper
+// ---------------------------------------------------------------------------
+function StatCell({
+  value,
+  format,
+  hideOnMobile = false,
+  width,
+}: {
+  value: number | null | undefined;
+  format: (v: number) => string;
+  hideOnMobile?: boolean;
+  width: number;
+}) {
+  const isNull = value == null;
+  return (
+    <div
+      style={{ width, flexShrink: 0, textAlign: "right" }}
+      className={hideOnMobile ? "hidden sm:block" : undefined}
+    >
+      {isNull ? (
+        <span style={{ color: "#555555", fontSize: 12 }}>—</span>
+      ) : (
+        <span style={{ color: "#888888", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600 }}>
+          {format(value as number)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Row component
 // ---------------------------------------------------------------------------
 function StandingRow({
   entry,
   isMe,
   weekPoints,
+  stats,
+  animationDelay,
   onClick,
 }: {
   entry: LeaderboardEntry;
   isMe: boolean;
   weekPoints: number | null;
+  stats: MemberStats | null;
+  animationDelay: number;
   onClick: () => void;
 }) {
   const isFirst = entry.rank === 1;
@@ -360,6 +466,7 @@ function StandingRow({
         padding: "14px 20px",
         display: "flex", alignItems: "center", gap: 12,
         cursor: "pointer", width: "100%", textAlign: "left",
+        animationDelay: `${animationDelay}ms`,
       }
     : {
         background: "#1A1A1A",
@@ -368,6 +475,7 @@ function StandingRow({
         padding: "14px 20px",
         display: "flex", alignItems: "center", gap: 12,
         cursor: "pointer", width: "100%", textAlign: "left",
+        animationDelay: `${animationDelay}ms`,
       };
 
   const usernameStyle: React.CSSProperties = {
@@ -394,7 +502,7 @@ function StandingRow({
   };
 
   return (
-    <button className="standing-row" style={rowStyle} onClick={onClick}>
+    <button className="standing-row animate-cascade-in" style={rowStyle} onClick={onClick}>
       {/* POS — 52px */}
       <div style={{ width: 52, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
         <div style={posBadgeStyle}>
@@ -432,22 +540,25 @@ function StandingRow({
         </div>
       </div>
 
-      {/* PTS ESTA SEM. — 120px */}
-      <div style={{ width: 120, flexShrink: 0, textAlign: "right" }}>
+      {/* AVG PTS — 80px, desktop only */}
+      <StatCell
+        value={stats?.avg_pts_per_week}
+        format={(v) => v.toFixed(1)}
+        width={80}
+        hideOnMobile
+      />
+
+      {/* PTS ESTA SEM. — 90px */}
+      <div style={{ width: 90, flexShrink: 0, textAlign: "right" }}>
         {weekPoints !== null
           ? <span style={weekPtsStyle}>{weekPoints.toFixed(1)}</span>
           : <span style={{ fontSize: 13, fontWeight: 600, color: "#555555" }}>—</span>
         }
       </div>
 
-      {/* TOTAL — 100px */}
-      <div style={{ width: 100, flexShrink: 0, textAlign: "right" }}>
+      {/* TOTAL — 80px */}
+      <div style={{ width: 80, flexShrink: 0, textAlign: "right" }}>
         <span style={totalPtsStyle}>{entry.total_points.toFixed(1)}</span>
-      </div>
-
-      {/* Δ — 60px */}
-      <div style={{ width: 60, flexShrink: 0, textAlign: "right" }}>
-        <DeltaBadge value={null} />
       </div>
     </button>
   );
@@ -458,27 +569,56 @@ function StandingRow({
 // ---------------------------------------------------------------------------
 export default function StandingsPage() {
   const { id: leagueId } = useParams<{ id: string }>();
-  const [entries, setEntries]       = useState<LeaderboardEntry[]>([]);
-  const [league, setLeague]         = useState<League | null>(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
-  const [myMemberId, setMyMemberId] = useState<string | null>(null);
+  const [entries, setEntries]               = useState<LeaderboardEntry[]>([]);
+  const [detailedEntries, setDetailedEntries] = useState<DetailedLeaderboardEntry[]>([]);
+  const [league, setLeague]                 = useState<League | null>(null);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState<string | null>(null);
+  const [myMemberId, setMyMemberId]         = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<{ id: string; name: string } | null>(null);
-  const rowsRef = useRef<HTMLDivElement>(null);
+  const [sortKey, setSortKey]               = useState<SortKey>("total_points");
+  const [sortDir, setSortDir]               = useState<"asc" | "desc">("desc");
+  const [animationKey, setAnimationKey]     = useState(0);
 
-  useGSAP(
-    () => {
-      if (!entries.length) return;
-      gsap.from(".standing-row", {
-        autoAlpha: 0,
-        y: 20,
-        duration: 0.5,
-        ease: "power2.out",
-        stagger: 0.06,
-      });
-    },
-    { scope: rowsRef, dependencies: [entries] }
-  );
+  // Build a stats lookup map from detailedEntries
+  const statsMap = useMemo(() => {
+    const map = new Map<string, MemberStats>();
+    for (const d of detailedEntries) {
+      map.set(d.member_id, d.stats);
+    }
+    return map;
+  }, [detailedEntries]);
+
+  // Sorted entries — client-side, derived from detailedEntries when available, else entries
+  const sortedEntries = useMemo(() => {
+    const base: LeaderboardEntry[] = detailedEntries.length > 0 ? detailedEntries : entries;
+    if (sortKey === "total_points") {
+      const sorted = [...base].sort((a, b) =>
+        sortDir === "desc"
+          ? b.total_points - a.total_points
+          : a.total_points - b.total_points,
+      );
+      return sorted;
+    }
+    return [...base].sort((a, b) => {
+      const statsA = statsMap.get(a.member_id);
+      const statsB = statsMap.get(b.member_id);
+      const valA = statsA ? (statsA[sortKey] ?? -Infinity) : -Infinity;
+      const valB = statsB ? (statsB[sortKey] ?? -Infinity) : -Infinity;
+      return sortDir === "desc" ? (valB as number) - (valA as number) : (valA as number) - (valB as number);
+    });
+  }, [entries, detailedEntries, statsMap, sortKey, sortDir]);
+
+  function handleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+    // Re-trigger cascade animation
+    setAnimationKey((k) => k + 1);
+  }
 
   useEffect(() => {
     Promise.all([
@@ -493,6 +633,29 @@ export default function StandingsPage() {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [leagueId]);
+
+  // Phase 2: load detailed stats non-blocking
+  useEffect(() => {
+    if (loading) return; // wait until phase 1 is done
+    api.scoring.detailedLeaderboard(leagueId)
+      .then((detailed) => {
+        setDetailedEntries(detailed);
+        setAnimationKey((k) => k + 1); // re-trigger cascade when stats arrive
+      })
+      .catch(() => {
+        // Graceful degradation — keep entries without stats
+      });
+  }, [leagueId, loading]);
+
+  const headerLabelStyle: React.CSSProperties = {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    color: "#333333",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+  };
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
@@ -565,59 +728,52 @@ export default function StandingsPage() {
           <div>
             {/* Table header */}
             <div style={{
-              display: "flex", alignItems: "center",
+              display: "flex", alignItems: "center", gap: 12,
               paddingInline: 20, marginBottom: 8,
             }}>
               <div style={{ width: 52, flexShrink: 0 }}>
-                <span style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 10, fontWeight: 600,
-                  letterSpacing: "0.08em", color: "#333333",
-                  textTransform: "uppercase",
-                }}>POS</span>
+                <span style={headerLabelStyle}>POS</span>
               </div>
               <div style={{ flex: 1 }}>
-                <span style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 10, fontWeight: 600,
-                  letterSpacing: "0.08em", color: "#333333",
-                  textTransform: "uppercase",
-                }}>MANAGER</span>
+                <span style={headerLabelStyle}>MANAGER</span>
               </div>
-              <div style={{ width: 120, flexShrink: 0, textAlign: "right" }}>
-                <span style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 10, fontWeight: 600,
-                  letterSpacing: "0.08em", color: "#333333",
-                  textTransform: "uppercase",
-                }}>PTS ESTA SEM.</span>
+
+              {/* Avg Pts header — desktop only */}
+              <SortableHeader
+                label="AVG PTS"
+                sortKey="avg_pts_per_week"
+                activeSortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+                width={80}
+                hideOnMobile
+              />
+
+              <div style={{ width: 90, flexShrink: 0, textAlign: "right" }}>
+                <span style={headerLabelStyle}>PTS ESTA SEM.</span>
               </div>
-              <div style={{ width: 100, flexShrink: 0, textAlign: "right" }}>
-                <span style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 10, fontWeight: 600,
-                  letterSpacing: "0.08em", color: "#333333",
-                  textTransform: "uppercase",
-                }}>TOTAL</span>
-              </div>
-              <div style={{ width: 60, flexShrink: 0, textAlign: "right" }}>
-                <span style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 10, fontWeight: 600,
-                  letterSpacing: "0.08em", color: "#333333",
-                  textTransform: "uppercase",
-                }}>Δ</span>
-              </div>
+
+              {/* TOTAL header with sort */}
+              <SortableHeader
+                label="TOTAL"
+                sortKey="total_points"
+                activeSortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+                width={80}
+              />
             </div>
 
-            {/* Rows */}
-            <div ref={rowsRef} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {entries.map((e) => (
+            {/* Rows — animationKey forces re-render to restart CSS animation */}
+            <div key={animationKey} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {sortedEntries.map((e, index) => (
                 <StandingRow
                   key={e.member_id}
                   entry={e}
                   isMe={e.member_id === myMemberId}
                   weekPoints={null}
+                  stats={statsMap.get(e.member_id) ?? null}
+                  animationDelay={index * 60}
                   onClick={() => setSelectedMember({ id: e.member_id, name: e.username ?? "Manager" })}
                 />
               ))}

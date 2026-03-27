@@ -116,6 +116,8 @@ export type SellOffer = {
   status: string;
   expires_at: string;
   player: PlayerBrief;
+  offer_type: "sistema" | "manager";
+  from_username?: string | null;
 };
 
 export type Candidate = {
@@ -185,6 +187,21 @@ export type ScoutPlayer = {
   avg_points: number;
   total_points: number;
   owner_name: string | null;
+  clause_amount?: number | null;
+  clause_expires_at?: string | null;
+  for_sale?: boolean;
+  for_sale_price?: number | null;
+};
+
+export type ClauseInfo = {
+  is_owned: boolean;
+  owned_by_me: boolean;
+  clause_amount: number | null;
+  clause_expires_at: string | null;
+  clause_active: boolean;
+  roster_player_id: string | null;
+  for_sale?: boolean;
+  owner_username?: string | null;
 };
 
 export type PlayerSplitHistory = {
@@ -218,6 +235,55 @@ export type Roster = {
 export type MemberRoster = {
   member: { id: string; total_points: number };
   players: { slot: string; price_paid: number; split_points: number; players: { id: string; name: string; team: string; role: string; image_url: string | null } }[];
+};
+
+export type MemberStats = {
+  avg_kda: number | null;
+  avg_gold_diff_15: number | null;
+  avg_pts_per_week: number | null;
+  games_counted: number;
+};
+
+export type DetailedLeaderboardEntry = {
+  rank: number;
+  member_id: string;
+  username: string | null;
+  avatar_url: string | null;
+  total_points: number;
+  remaining_budget: number;
+  player_count: number;
+  stats: MemberStats;
+};
+
+export type UpcomingMatch = {
+  date: string;
+  opponent: string;
+  home_or_away: string;
+};
+
+export type PlayerSchedule = {
+  player_id: string;
+  team: string;
+  upcoming: UpcomingMatch[];
+};
+
+export type TeamStandingEntry = {
+  team_id: string;
+  team_name: string;
+  logo_url: string | null;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  avg_kda: number | null;
+  avg_gold_diff_15: number | null;
+  avg_dpm: number | null;
+  avg_cs_per_min: number | null;
+  games_played: number;
+};
+
+export type TeamStandingsOut = {
+  competition_name: string;
+  entries: TeamStandingEntry[];
 };
 
 export const api = {
@@ -277,10 +343,17 @@ export const api = {
       req(`/market/${leagueId}/sell-offers/${offerId}/reject`, { method: "POST" }),
     candidates: (leagueId: string) =>
       req<Candidate[]>(`/market/${leagueId}/candidates`),
+    makeOffer: (leagueId: string, rosterPlayerId: string, amount: number) =>
+      req<{ id: string; ask_price: number; message: string }>(`/market/${leagueId}/offer`, {
+        method: "POST",
+        body: JSON.stringify({ roster_player_id: rosterPlayerId, amount }),
+      }),
   },
   scoring: {
     leaderboard: (leagueId: string) =>
       req<LeaderboardEntry[]>(`/scoring/leaderboard/${leagueId}`),
+    detailedLeaderboard: (leagueId: string) =>
+      req<DetailedLeaderboardEntry[]>(`/scoring/leaderboard/${leagueId}/detailed`),
     playerHistory: (playerId: string) =>
       req<{ player: { id: string; name: string; team: string; role: string; image_url: string | null; current_price: number }; stats: PlayerMatchStat[]; total_points: number }>(`/scoring/player/${playerId}/history`),
   },
@@ -292,12 +365,16 @@ export const api = {
   players: {
     scout: (leagueId: string) =>
       req<ScoutPlayer[]>(`/players/scout?league_id=${leagueId}`),
+    schedule: (playerId: string) =>
+      req<PlayerSchedule>(`/players/${playerId}/schedule`),
   },
   activity: {
     feed: (leagueId: string, limit = 50) =>
       req<ActivityEvent[]>(`/activity/${leagueId}?limit=${limit}`),
   },
   clause: {
+    info: (leagueId: string, playerId: string) =>
+      req<ClauseInfo>(`/market/${leagueId}/clause/${playerId}`),
     activate: (leagueId: string, rosterPlayerId: string) =>
       req(`/market/${leagueId}/clause/${rosterPlayerId}/activate`, { method: "POST" }),
     upgrade: (leagueId: string, rosterPlayerId: string, amount: number) =>
@@ -315,5 +392,11 @@ export const api = {
     myBids: (leagueId: string) => req<MyBid[]>(`/bids/${leagueId}/my-bids`),
     cancel: (leagueId: string, listingId: string) =>
       req(`/bids/${leagueId}/listings/${listingId}`, { method: "DELETE" }),
+  },
+  teams: {
+    standings: (leagueId: string, competitionId?: string) =>
+      req<TeamStandingsOut>(
+        `/teams/standings/${leagueId}${competitionId ? `?competition_id=${competitionId}` : ""}`
+      ),
   },
 };
