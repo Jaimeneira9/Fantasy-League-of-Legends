@@ -152,7 +152,7 @@ async def get_player_score_history(
     series_stats_resp = (
         supabase.table("player_series_stats")
         .select(
-            "series_id, series_points, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_dpm, avg_vision_score,"
+            "series_id, series_points, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_dpm,"
             " series(id, date, competition_id, winner_id, team_home_id, team_away_id, competitions(name))"
         )
         .eq("player_id", str(player_id))
@@ -164,6 +164,9 @@ async def get_player_score_history(
     # Ordenar por series.date DESC, limit 10
     raw_series.sort(key=lambda x: (x.get("series") or {}).get("date") or "", reverse=True)
     raw_series = raw_series[:10]
+
+    # Collect series_ids for the diff stats lookup
+    series_ids_for_lookup = [str(row["series_id"]) for row in raw_series]
 
     # Collect all team_ids to fetch names
     team_ids: set[str] = set()
@@ -183,6 +186,35 @@ async def get_player_score_history(
             .execute()
         )
         teams_map = {t["id"]: t["name"] for t in (teams_resp.data or [])}
+
+    # Fetch gold_diff_15 and xp_diff_15 from player_game_stats joined with games(series_id)
+    # Build per-series averages
+    series_gold_diff: dict[str, float | None] = {}
+    series_xp_diff: dict[str, float | None] = {}
+    if series_ids_for_lookup:
+        pgs_resp = (
+            supabase.table("player_game_stats")
+            .select("gold_diff_15, xp_diff_15, games(series_id)")
+            .eq("player_id", str(player_id))
+            .execute()
+        )
+        # Group by series_id
+        gold_by_series: dict[str, list[float]] = {}
+        xp_by_series: dict[str, list[float]] = {}
+        for pgs_row in (pgs_resp.data or []):
+            game = pgs_row.get("games") or {}
+            sid = str(game.get("series_id") or "")
+            if sid not in series_ids_for_lookup:
+                continue
+            if pgs_row.get("gold_diff_15") is not None:
+                gold_by_series.setdefault(sid, []).append(float(pgs_row["gold_diff_15"]))
+            if pgs_row.get("xp_diff_15") is not None:
+                xp_by_series.setdefault(sid, []).append(float(pgs_row["xp_diff_15"]))
+        for sid in series_ids_for_lookup:
+            gold_vals = gold_by_series.get(sid, [])
+            xp_vals = xp_by_series.get(sid, [])
+            series_gold_diff[sid] = round(sum(gold_vals) / len(gold_vals), 1) if gold_vals else None
+            series_xp_diff[sid] = round(sum(xp_vals) / len(xp_vals), 1) if xp_vals else None
 
     stats = []
     for row in raw_series:
@@ -211,18 +243,18 @@ async def get_player_score_history(
         else:
             result = 0
 
+        sid = str(row["series_id"])
         stats.append({
-            "series_id": str(row["series_id"]),
+            "series_id": sid,
             "kills": round(float(row.get("avg_kills") or 0), 2),
             "deaths": round(float(row.get("avg_deaths") or 0), 2),
             "assists": round(float(row.get("avg_assists") or 0), 2),
             "cs_per_min": round(float(row.get("avg_cs_per_min") or 0), 2),
-            "vision_score": round(float(row.get("avg_vision_score") or 0), 1),
             "fantasy_points": round(float(row.get("series_points") or 0), 2),
             "result": result,
             "dpm": round(float(row.get("avg_dpm") or 0), 1) if row.get("avg_dpm") is not None else None,
-            "gold_diff_at_15": None,
-            "xp_diff_15": None,
+            "gold_diff_at_15": series_gold_diff.get(sid),
+            "xp_diff_at_15": series_xp_diff.get(sid),
             "turret_damage": None,
             "competition_id": competition_id,
             "competition_name": competition_name,

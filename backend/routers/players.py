@@ -47,8 +47,8 @@ class ScoutPlayer(BaseModel):
     total_deaths: float
     total_assists: float
     avg_cs_per_min: float
-    avg_gold_diff_15: float
-    avg_xp_diff_15: float
+    avg_gold_diff_15: float = 0.0
+    avg_xp_diff_15: float = 0.0
     avg_dpm: float
     avg_vision_score: float
     avg_points: float
@@ -108,7 +108,7 @@ async def scout_players(
     if competition_id:
         stats_resp = (
             supabase.table("player_series_stats")
-            .select("player_id, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_gold_diff_15, avg_xp_diff_15, avg_dpm, avg_vision_score, series_points, series(competition_id)")
+            .select("player_id, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_dpm, avg_vision_score, series_points, series(competition_id)")
             .in_("player_id", player_ids)
             .execute()
         )
@@ -119,7 +119,7 @@ async def scout_players(
     else:
         stats_resp = (
             supabase.table("player_series_stats")
-            .select("player_id, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_gold_diff_15, avg_xp_diff_15, avg_dpm, avg_vision_score, series_points")
+            .select("player_id, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_dpm, avg_vision_score, series_points")
             .in_("player_id", player_ids)
             .execute()
         )
@@ -234,8 +234,6 @@ async def scout_players(
             total_deaths=total(rows, "avg_deaths"),
             total_assists=total(rows, "avg_assists"),
             avg_cs_per_min=avg(rows, "avg_cs_per_min"),
-            avg_gold_diff_15=avg(rows, "avg_gold_diff_15"),
-            avg_xp_diff_15=avg(rows, "avg_xp_diff_15"),
             avg_dpm=avg(rows, "avg_dpm"),
             avg_vision_score=avg(rows, "avg_vision_score"),
             avg_points=avg(rows, "series_points"),

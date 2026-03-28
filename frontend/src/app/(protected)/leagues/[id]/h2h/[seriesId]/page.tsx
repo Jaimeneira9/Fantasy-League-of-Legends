@@ -11,6 +11,9 @@ import { api, type H2HResponse, type TeamH2HStats, type PlayerH2HStats } from "@
 const TEAM_LOGO_BASE =
   "https://kjtifrtuknxtuuiyflza.supabase.co/storage/v1/object/public/FotosEquiposLec/";
 
+const PLAYER_PHOTO_BASE =
+  "https://kjtifrtuknxtuuiyflza.supabase.co/storage/v1/object/public/FotosJugadoresLec/";
+
 const ROLE_LABEL: Record<string, string> = {
   top: "TOP",
   jungle: "JUNGLE",
@@ -27,6 +30,10 @@ const ROLE_ORDER = ["top", "jungle", "mid", "adc", "support"];
 
 function teamLogoUrl(name: string): string {
   return `${TEAM_LOGO_BASE}${name.toLowerCase().replace(/ /g, "-")}.webp`;
+}
+
+function playerPhotoUrl(player: PlayerH2HStats): string {
+  return player.image_url || `${PLAYER_PHOTO_BASE}${player.name.toLowerCase().replace(/ /g, "-")}.webp`;
 }
 
 function fmt(value: number, decimals = 2): string {
@@ -291,7 +298,7 @@ function PlayerStatPair({
       >
         {homeVal != null ? format(hv) : "—"}
       </span>
-      <span style={{ fontSize: 9, color: "#333", fontFamily: "'Space Grotesk', sans-serif", textTransform: "uppercase" }}>
+      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Space Grotesk', sans-serif", textTransform: "uppercase", letterSpacing: "0.05em" }}>
         {label}
       </span>
       <span
@@ -339,7 +346,7 @@ function PlayersTab({
           <div
             key={role}
             style={{
-              padding: "12px 14px",
+              padding: "16px 16px",
               borderBottom: idx < ROLE_ORDER.length - 1 ? "1px solid #1A1A1A" : "none",
             }}
           >
@@ -352,7 +359,7 @@ function PlayersTab({
                 color: "#333333",
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
-                marginBottom: 8,
+                marginBottom: 12,
                 textAlign: "center",
               }}
             >
@@ -364,50 +371,67 @@ function PlayersTab({
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr auto 1fr",
-                gap: 8,
-                alignItems: "start",
+                gap: 12,
+                alignItems: "center",
               }}
             >
               {/* Home player */}
-              <div style={{ textAlign: "right", minWidth: 0, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end", minWidth: 0 }}>
                 {hp ? (
                   <>
-                    <p
+                    <div style={{ textAlign: "right", minWidth: 0, overflow: "hidden" }}>
+                      <p
+                        style={{
+                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#F0E8D0",
+                          marginBottom: 3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {hp.name}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: "'Barlow Condensed', sans-serif",
+                          fontSize: 11,
+                          color: "#666",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {fmt(hp.avg_kda, 2)} KDA
+                      </p>
+                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={playerPhotoUrl(hp)}
+                      alt={hp.name}
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
                       style={{
-                        fontFamily: "'Space Grotesk', sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "#F0E8D0",
-                        marginBottom: 2,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        width: 40,
+                        height: 40,
+                        borderRadius: 8,
+                        objectFit: "cover",
+                        objectPosition: "center top",
+                        flexShrink: 0,
+                        background: "#1A1A1A",
                       }}
-                    >
-                      {hp.name}
-                    </p>
-                    <p
-                      style={{
-                        fontFamily: "'Barlow Condensed', sans-serif",
-                        fontSize: 10,
-                        color: "#555",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {fmt(hp.avg_kda, 2)} KDA · {fmt(hp.avg_cs_per_min, 1)} CS
-                    </p>
+                    />
                   </>
                 ) : (
-                  <p style={{ fontSize: 11, color: "#444" }}>Sin datos</p>
+                  <p style={{ fontSize: 11, color: "#444", textAlign: "right", flex: 1 }}>Sin datos</p>
                 )}
               </div>
 
               {/* VS divider */}
-              <div style={{ textAlign: "center", paddingTop: 2, flexShrink: 0 }}>
+              <div style={{ textAlign: "center", flexShrink: 0 }}>
                 <span
                   style={{
                     fontFamily: "'Barlow Condensed', sans-serif",
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: 700,
                     color: "#333333",
                     letterSpacing: "0.06em",
@@ -418,33 +442,50 @@ function PlayersTab({
               </div>
 
               {/* Away player */}
-              <div style={{ textAlign: "left", minWidth: 0, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-start", minWidth: 0 }}>
                 {ap ? (
                   <>
-                    <p
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={playerPhotoUrl(ap)}
+                      alt={ap.name}
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
                       style={{
-                        fontFamily: "'Space Grotesk', sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "#F0E8D0",
-                        marginBottom: 2,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        width: 40,
+                        height: 40,
+                        borderRadius: 8,
+                        objectFit: "cover",
+                        objectPosition: "center top",
+                        flexShrink: 0,
+                        background: "#1A1A1A",
                       }}
-                    >
-                      {ap.name}
-                    </p>
-                    <p
-                      style={{
-                        fontFamily: "'Barlow Condensed', sans-serif",
-                        fontSize: 10,
-                        color: "#555",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {fmt(ap.avg_kda, 2)} KDA · {fmt(ap.avg_cs_per_min, 1)} CS
-                    </p>
+                    />
+                    <div style={{ textAlign: "left", minWidth: 0, overflow: "hidden" }}>
+                      <p
+                        style={{
+                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#F0E8D0",
+                          marginBottom: 3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ap.name}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: "'Barlow Condensed', sans-serif",
+                          fontSize: 11,
+                          color: "#666",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {fmt(ap.avg_kda, 2)} KDA
+                      </p>
+                    </div>
                   </>
                 ) : (
                   <p style={{ fontSize: 11, color: "#444" }}>Sin datos</p>
@@ -458,9 +499,11 @@ function PlayersTab({
                 style={{
                   display: "flex",
                   justifyContent: "center",
-                  gap: 10,
-                  marginTop: 6,
+                  gap: 16,
+                  marginTop: 12,
                   flexWrap: "wrap",
+                  padding: "10px 0 2px",
+                  borderTop: "1px solid #1A1A1A",
                 }}
               >
                 <PlayerStatPair
@@ -470,7 +513,7 @@ function PlayersTab({
                   format={(v) => fmt(v, 2)}
                 />
                 <PlayerStatPair
-                  label="CS"
+                  label="CS/min"
                   homeVal={hp?.avg_cs_per_min ?? null}
                   awayVal={ap?.avg_cs_per_min ?? null}
                   format={(v) => fmt(v, 1)}
@@ -480,6 +523,12 @@ function PlayersTab({
                   homeVal={hp?.avg_dpm ?? null}
                   awayVal={ap?.avg_dpm ?? null}
                   format={(v) => Math.round(v).toLocaleString()}
+                />
+                <PlayerStatPair
+                  label="Kills"
+                  homeVal={hp?.avg_kills ?? null}
+                  awayVal={ap?.avg_kills ?? null}
+                  format={(v) => fmt(v, 1)}
                 />
               </div>
             )}
