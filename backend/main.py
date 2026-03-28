@@ -115,7 +115,7 @@ for _origin in _PRODUCTION_ORIGINS:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_origin_regex=r"https://summoners-fantasy(-[a-z0-9]+-jaimeneira9s-projects)?\.vercel\.app",
+    allow_origin_regex=r"https://summoners-fantasy(-[a-z0-9-]+-jaimeneira9s-projects)?\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
