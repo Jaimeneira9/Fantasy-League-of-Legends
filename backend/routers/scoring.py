@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from supabase import Client
 
 from auth.dependencies import get_current_user, get_supabase
-from scoring.engine import ROLE_WEIGHTS, STATS_TO_NORMALIZE
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +121,7 @@ async def get_player_score_history(
     supabase: Client = Depends(get_supabase),
     user: dict = Depends(get_current_user),
 ) -> dict:
-    """Historial de stats y puntuación de un jugador (últimas 10 partidas)."""
+    """Historial de stats y puntuación de un jugador (últimas 10 series)."""
     # Datos básicos del jugador
     player_resp = (
         supabase.table("players")
@@ -134,132 +133,108 @@ async def get_player_score_history(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jugador no encontrado")
     player = player_resp.data[0]
 
-    # Obtener los games del jugador ordenados por fecha real de la serie (desc)
-    # Primero buscamos los game_ids via games → series ordenados por series.date
-    games_for_player_resp = (
-        supabase.table("player_game_stats")
-        .select("game_id, games(id, series(date))")
+    # Resolver team_id del jugador via teams table (matching por nombre)
+    player_team_name = player.get("team", "")
+    player_team_id: str | None = None
+    if player_team_name:
+        all_teams_resp = supabase.table("teams").select("id, name, aliases").execute()
+        for t in (all_teams_resp.data or []):
+            aliases: list[str] = t.get("aliases") or []
+            all_names = [t["name"]] + aliases
+            for alias in all_names:
+                if alias.strip().lower() == player_team_name.strip().lower():
+                    player_team_id = str(t["id"])
+                    break
+            if player_team_id:
+                break
+
+    # Fetch player_series_stats con join a series (fecha, equipos, winner) y teams
+    series_stats_resp = (
+        supabase.table("player_series_stats")
+        .select(
+            "series_id, series_points, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_dpm, avg_vision_score,"
+            " series(id, date, competition_id, winner_id, team_home_id, team_away_id, competitions(name))"
+        )
         .eq("player_id", str(player_id))
+        .order("series_id", desc=True)
         .execute()
     )
-    # Construir lista ordenada por series.date desc, limitada a 10
-    games_with_date = []
-    for row in (games_for_player_resp.data or []):
-        game = row.get("games") or {}
-        series_info = game.get("series") or {}
-        games_with_date.append({
-            "game_id": row["game_id"],
-            "series_date": series_info.get("date"),
-        })
-    games_with_date.sort(key=lambda x: x["series_date"] or "", reverse=False)
-    ordered_game_ids = [g["game_id"] for g in games_with_date[:10]]
+    raw_series = series_stats_resp.data or []
 
-    # Stats recientes desde player_game_stats
-    stats_resp = (
-        supabase.table("player_game_stats")
-        .select("kills, deaths, assists, cs_per_min, vision_score, game_points, dpm, gold_diff_15, xp_diff_15, turret_damage, objective_steals, game_id, result")
-        .eq("player_id", str(player_id))
-        .in_("game_id", ordered_game_ids)
-        .execute()
-    )
-    raw_stats = stats_resp.data or []
-    # Re-ordenar raw_stats según el orden correcto de fechas
-    game_id_order = {gid: idx for idx, gid in enumerate(ordered_game_ids)}
-    raw_stats.sort(key=lambda s: game_id_order.get(s["game_id"], 9999))
+    # Ordenar por series.date DESC, limit 10
+    raw_series.sort(key=lambda x: (x.get("series") or {}).get("date") or "", reverse=True)
+    raw_series = raw_series[:10]
 
-    # Enriquecer con metadata del game (equipos + fecha + duración)
-    game_ids = ordered_game_ids
-    games_map: dict = {}
-    teams_map: dict = {}
-    if game_ids:
-        games_resp = (
-            supabase.table("games")
-            .select("id, team_home_id, team_away_id, duration_min, series(date, competition_id, competitions(name))")
-            .in_("id", game_ids)
+    # Collect all team_ids to fetch names
+    team_ids: set[str] = set()
+    for row in raw_series:
+        s = row.get("series") or {}
+        if s.get("team_home_id"):
+            team_ids.add(s["team_home_id"])
+        if s.get("team_away_id"):
+            team_ids.add(s["team_away_id"])
+
+    teams_map: dict[str, str] = {}
+    if team_ids:
+        teams_resp = (
+            supabase.table("teams")
+            .select("id, name")
+            .in_("id", list(team_ids))
             .execute()
         )
-        games_map = {g["id"]: g for g in (games_resp.data or [])}
-
-        team_ids = {g["team_home_id"] for g in games_resp.data or []} | \
-                   {g["team_away_id"] for g in games_resp.data or []}
-        if team_ids:
-            teams_resp = (
-                supabase.table("teams")
-                .select("id, name")
-                .in_("id", list(team_ids))
-                .execute()
-            )
-            teams_map = {t["id"]: t["name"] for t in (teams_resp.data or [])}
-
-    # Obtener el equipo del jugador para identificar al rival
-    player_team = player.get("team", "")
+        teams_map = {t["id"]: t["name"] for t in (teams_resp.data or [])}
 
     stats = []
-    for s in raw_stats:
-        game = games_map.get(s["game_id"]) or {}
-        series_data = game.get("series") or {}
-        duration = float(game.get("duration_min") or 30)
+    for row in raw_series:
+        s = row.get("series") or {}
+        competition_obj = s.get("competitions") or {}
+        competition_id = str(s.get("competition_id") or "")
+        competition_name = competition_obj.get("name") or ""
 
-        home_name = teams_map.get(game.get("team_home_id"), "")
-        away_name = teams_map.get(game.get("team_away_id"), "")
+        home_id = s.get("team_home_id")
+        away_id = s.get("team_away_id")
+        home_name = teams_map.get(home_id, "") if home_id else ""
+        away_name = teams_map.get(away_id, "") if away_id else ""
+
         # team_1 = equipo del jugador, team_2 = rival
-        if player_team and player_team.lower() in away_name.lower():
+        if player_team_id and away_id == player_team_id:
             team_1, team_2 = away_name, home_name
         else:
             team_1, team_2 = home_name, away_name
 
-        competition_id = str(series_data.get("competition_id") or "")
-        competition_obj = series_data.get("competitions") or {}
-        competition_name = competition_obj.get("name") or ""
-
-        # Calcular breakdown de puntos por stat
-        role = player.get("role", "")
-        role_weights = ROLE_WEIGHTS.get(role, {})
-        can_normalize = duration > 0
-        stat_values = {
-            "kills": s.get("kills") or 0,
-            "deaths": s.get("deaths") or 0,
-            "assists": s.get("assists") or 0,
-            "cs_per_min": float(s.get("cs_per_min") or 0),
-            "vision_score": s.get("vision_score") or 0,
-            "dpm": float(s.get("dpm") or 0),
-            "gold_diff_15": s.get("gold_diff_15") or 0,
-            "xp_diff_15": s.get("xp_diff_15") or 0,
-            "turret_damage": s.get("turret_damage") or 0,
-            "objective_steals": s.get("objective_steals") or 0,
-        }
-        stat_breakdown: dict[str, float] = {}
-        for stat, weight in role_weights.items():
-            raw = stat_values.get(stat, 0)
-            if can_normalize and stat in STATS_TO_NORMALIZE:
-                value = raw / duration
-            else:
-                value = raw
-            stat_breakdown[stat] = round(value * weight, 2)
+        # Determinar resultado de la serie
+        winner_id = s.get("winner_id")
+        if winner_id is None:
+            result = None
+        elif player_team_id and winner_id == player_team_id:
+            result = 1
+        else:
+            result = 0
 
         stats.append({
-            "kills": s["kills"],
-            "deaths": s["deaths"],
-            "assists": s["assists"],
-            "cs_per_min": round(float(s["cs_per_min"] or 0), 2),
-            "vision_score": s["vision_score"],
-            "fantasy_points": s["game_points"],
-            "result": s.get("result"),
-            "dpm": s.get("dpm"),
-            "gold_diff_at_15": s.get("gold_diff_15"),
-            "xp_diff_15": s.get("xp_diff_15"),
-            "turret_damage": s.get("turret_damage"),
+            "series_id": str(row["series_id"]),
+            "kills": round(float(row.get("avg_kills") or 0), 2),
+            "deaths": round(float(row.get("avg_deaths") or 0), 2),
+            "assists": round(float(row.get("avg_assists") or 0), 2),
+            "cs_per_min": round(float(row.get("avg_cs_per_min") or 0), 2),
+            "vision_score": round(float(row.get("avg_vision_score") or 0), 1),
+            "fantasy_points": round(float(row.get("series_points") or 0), 2),
+            "result": result,
+            "dpm": round(float(row.get("avg_dpm") or 0), 1) if row.get("avg_dpm") is not None else None,
+            "gold_diff_at_15": None,
+            "xp_diff_15": None,
+            "turret_damage": None,
             "competition_id": competition_id,
             "competition_name": competition_name,
-            "stat_breakdown": stat_breakdown,
+            "stat_breakdown": None,
             "matches": {
-                "scheduled_at": series_data.get("date"),
+                "scheduled_at": s.get("date"),
                 "team_1": team_1,
                 "team_2": team_2,
-            } if game else None,
+            } if s else None,
         })
 
-    # Obtener la competition activa para filtrar puntos del split actual
+    # Obtener la competition activa para calcular el total del split actual
     active_comp_resp = (
         supabase.table("competitions")
         .select("id")
@@ -269,22 +244,20 @@ async def get_player_score_history(
     )
     active_competition_id = (active_comp_resp.data or [{}])[0].get("id") if active_comp_resp.data else None
 
-    # Query separada sin límite para calcular el total real del split actual
-    # Filtra player_game_stats → games → series donde series.competition_id = competition activa
+    # Sumar series_points de todas las series del split activo (sin límite de 10)
     if active_competition_id:
         total_resp = (
-            supabase.table("player_game_stats")
-            .select("game_points, games(series(competition_id))")
+            supabase.table("player_series_stats")
+            .select("series_points, series(competition_id)")
             .eq("player_id", str(player_id))
             .execute()
         )
         total_points = sum(
-            float(r.get("game_points") or 0)
+            float(r.get("series_points") or 0)
             for r in (total_resp.data or [])
-            if (r.get("games") or {}).get("series", {}).get("competition_id") == active_competition_id
+            if str((r.get("series") or {}).get("competition_id") or "") == str(active_competition_id)
         )
     else:
-        # Sin competition activa: devolver 0 en lugar de sumar todo sin filtro
         total_points = 0.0
 
     return {"player": player, "stats": stats, "total_points": round(total_points, 2)}

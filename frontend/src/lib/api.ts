@@ -80,6 +80,7 @@ export type ActivityEvent = {
 };
 
 export type PlayerMatchStat = {
+  series_id?: string | null;
   kills: number;
   deaths: number;
   assists: number;
@@ -95,6 +96,22 @@ export type PlayerMatchStat = {
   competition_name: string;
   stat_breakdown?: Record<string, number>;
   matches?: { scheduled_at: string | null; team_1: string; team_2: string } | null;
+};
+
+export type GameDetailStat = {
+  game_number: number;
+  result: number | null;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs_per_min: number;
+  dpm: number;
+  game_points: number;
+};
+
+export type SeriesGamesResponse = {
+  series_id: string;
+  games: GameDetailStat[];
 };
 
 export type MyBid = {
@@ -418,6 +435,8 @@ export const api = {
       req<ScoutPlayer[]>(`/players/scout?league_id=${leagueId}${competitionId ? `&competition_id=${competitionId}` : ""}`),
     schedule: (playerId: string) =>
       req<PlayerSchedule>(`/players/${playerId}/schedule`),
+    seriesGames: (playerId: string, seriesId: string) =>
+      req<SeriesGamesResponse>(`/players/${playerId}/series/${seriesId}/games`),
   },
   activity: {
     feed: (leagueId: string, limit = 50) =>
