@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { label: "Roster", icon: "groups", href: "lineup", match: "/lineup" },
   { label: "Mercado", icon: "storefront", href: "market", match: "/market" },
   { label: "Equipos", icon: "shield", href: "teams", match: "/teams" },
-  { label: "Actividad", icon: "history", href: "activity", match: "/activity" },
+  { label: "Calendario", icon: "calendar_month", href: "calendar", match: "/calendar" },
 ] as const;
 
 export default function BottomNav({ leagueId }: BottomNavProps) {

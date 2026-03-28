@@ -119,6 +119,15 @@ export default function Sidebar({ leagueId, leagueName }: SidebarProps) {
           <span>Equipos</span>
         </Link>
 
+        {/* Calendario */}
+        <Link
+          href={`/leagues/${leagueId}/calendar`}
+          className={itemClass(pathname.includes("/calendar") || pathname.includes("/h2h"))}
+        >
+          <span className="material-symbols-outlined text-xl">calendar_month</span>
+          <span>Calendario</span>
+        </Link>
+
         {/* Actividad */}
         <Link
           href={`/leagues/${leagueId}/activity`}
