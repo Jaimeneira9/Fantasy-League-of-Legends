@@ -133,11 +133,11 @@ def get_team_standings(
     all_players = players_resp.data or []
 
     # Mapear player_id -> team_name (solo players cuyos teams estén en la competition)
-    team_name_to_id = {t["name"]: t["id"] for t in teams}
+    team_name_to_id = {t["name"].lower(): t["id"] for t in teams}
     player_to_team_id: dict[str, str] = {}
     for p in all_players:
         team_name = p.get("team") or ""
-        tid = team_name_to_id.get(team_name)
+        tid = team_name_to_id.get(team_name.lower())
         if tid:
             player_to_team_id[p["id"]] = tid
 
