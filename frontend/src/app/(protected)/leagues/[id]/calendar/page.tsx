@@ -38,7 +38,7 @@ function groupByWeek(
     map.get(key)!.push(s);
   }
   const result: Array<{ week: number | null; label: string; matches: SeriesCalendarEntry[] }> = [];
-  for (const [key, matches] of map) {
+  for (const [key, matches] of Array.from(map.entries())) {
     const week = key === "sin-semana" ? null : Number(key);
     result.push({
       week,
