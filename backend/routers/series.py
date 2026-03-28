@@ -48,6 +48,7 @@ class PlayerH2HStats(BaseModel):
     player_id: str
     name: str
     role: str
+    image_url: str | None
     avg_kills: float
     avg_deaths: float
     avg_assists: float
@@ -233,6 +234,7 @@ def _build_players_stats(
                 player_id=pid,
                 name=p.get("name") or "",
                 role=role,
+                image_url=p.get("image_url"),
                 avg_kills=avg_kills,
                 avg_deaths=avg_deaths,
                 avg_assists=avg_assists,
@@ -362,7 +364,7 @@ def get_h2h(
     # 4. Fetch all active players (for team membership)
     all_players_resp = (
         supabase.table("players")
-        .select("id, name, team, role")
+        .select("id, name, team, role, image_url")
         .eq("is_active", True)
         .execute()
     )

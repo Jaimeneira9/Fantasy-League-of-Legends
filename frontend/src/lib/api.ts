@@ -85,12 +85,11 @@ export type PlayerMatchStat = {
   deaths: number;
   assists: number;
   cs_per_min: number;
-  vision_score: number;
   fantasy_points: number;
   result?: number | null;
   dpm: number | null;
   gold_diff_at_15: number | null;
-  xp_diff_15?: number | null;
+  xp_diff_at_15?: number | null;
   turret_damage?: number | null;
   competition_id: string;
   competition_name: string;
@@ -334,6 +333,7 @@ export type PlayerH2HStats = {
   player_id: string;
   name: string;
   role: string;
+  image_url?: string | null;
   avg_kills: number;
   avg_deaths: number;
   avg_assists: number;

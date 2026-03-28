@@ -1073,10 +1073,14 @@ export default function PlayerStatsPage() {
           breakdownKey: "dpm",
         },
         {
-          label: "Visión",
-          value: selectedStat.vision_score != null ? String(selectedStat.vision_score) : "—",
-          barPct: selectedStat.vision_score != null ? barWidth(selectedStat.vision_score, 50) : null,
-          breakdownKey: "vision_score",
+          label: "XP @15",
+          value: selectedStat.xp_diff_at_15 != null
+            ? (selectedStat.xp_diff_at_15 >= 0 ? `+${Math.round(selectedStat.xp_diff_at_15)}` : String(Math.round(selectedStat.xp_diff_at_15)))
+            : "—",
+          barPct: selectedStat.xp_diff_at_15 != null
+            ? Math.min(Math.max(50 + (selectedStat.xp_diff_at_15 / 2000) * 50, 0), 100)
+            : null,
+          breakdownKey: "xp_diff_15",
         },
         {
           label: "Gold @15",
