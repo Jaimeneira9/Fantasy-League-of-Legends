@@ -257,6 +257,7 @@ class UpcomingMatch(BaseModel):
     date: str           # "2026-03-28"
     opponent: str       # "Fnatic"
     home_or_away: str   # "home" | "away"
+    series_id: str | None = None  # UUID of the series row
 
 
 class PlayerScheduleOut(BaseModel):
@@ -375,6 +376,7 @@ def get_player_schedule(
                     date=str(row["date"]),
                     opponent=opponent_name,
                     home_or_away="home",
+                    series_id=str(row["id"]),
                 )
             )
 
@@ -386,6 +388,7 @@ def get_player_schedule(
                     date=str(row["date"]),
                     opponent=opponent_name,
                     home_or_away="away",
+                    series_id=str(row["id"]),
                 )
             )
 

@@ -260,6 +260,7 @@ export type UpcomingMatch = {
   date: string;
   opponent: string;
   home_or_away: string;
+  series_id?: string | null;
 };
 
 export type PlayerSchedule = {
@@ -285,6 +286,55 @@ export type TeamStandingEntry = {
 export type TeamStandingsOut = {
   competition_name: string;
   entries: TeamStandingEntry[];
+};
+
+export type SeriesCalendarEntry = {
+  series_id: string;
+  team_home: string;
+  team_away: string;
+  date: string;
+  week: number | null;
+  status: string;
+  result: string | null;
+};
+
+export type CalendarResponse = {
+  series: SeriesCalendarEntry[];
+};
+
+export type TeamH2HStats = {
+  team_id: string;
+  team_name: string;
+  wins: number;
+  losses: number;
+  avg_kda: number;
+  avg_gold_diff_15: number;
+  avg_dpm: number;
+  avg_cs_per_min: number;
+};
+
+export type PlayerH2HStats = {
+  player_id: string;
+  name: string;
+  role: string;
+  avg_kills: number;
+  avg_deaths: number;
+  avg_assists: number;
+  avg_cs_per_min: number;
+  avg_dpm: number;
+  avg_kda: number;
+  series_played: number;
+};
+
+export type H2HResponse = {
+  series_id: string;
+  date: string;
+  status: string;
+  result: string | null;
+  team_home: TeamH2HStats;
+  team_away: TeamH2HStats;
+  players_home: PlayerH2HStats[];
+  players_away: PlayerH2HStats[];
 };
 
 export const api = {
@@ -399,5 +449,11 @@ export const api = {
       req<TeamStandingsOut>(
         `/teams/standings/${leagueId}${competitionId ? `?competition_id=${competitionId}` : ""}`
       ),
+  },
+  series: {
+    calendar: (leagueId: string) =>
+      req<CalendarResponse>(`/series/${leagueId}/calendar`),
+    h2h: (seriesId: string, leagueId: string) =>
+      req<H2HResponse>(`/series/${seriesId}/h2h?league_id=${leagueId}`),
   },
 };

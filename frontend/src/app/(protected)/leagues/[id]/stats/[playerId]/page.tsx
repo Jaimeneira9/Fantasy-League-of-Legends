@@ -86,10 +86,12 @@ function UpcomingSchedule({
   matches,
   loading,
   role,
+  leagueId,
 }: {
   matches: UpcomingMatch[] | null;
   loading: boolean;
   role: string;
+  leagueId: string;
 }) {
   if (role === "coach") return null;
 
@@ -165,19 +167,8 @@ function UpcomingSchedule({
             month: "short",
           });
           const opponentSlug = match.opponent.toLowerCase().replace(/ /g, "-");
-          return (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 10px",
-                borderRadius: 8,
-                background: "#0F0F0F",
-                border: "1px solid #1A1A1A",
-              }}
-            >
+          const inner = (
+            <>
               {/* Team logo */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -219,6 +210,29 @@ function UpcomingSchedule({
               }}>
                 {formatted}
               </span>
+            </>
+          );
+          const sharedStyle: React.CSSProperties = {
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "8px 10px",
+            borderRadius: 8,
+            background: "#0F0F0F",
+            border: "1px solid #1A1A1A",
+            textDecoration: "none",
+          };
+          return match.series_id ? (
+            <Link
+              key={i}
+              href={`/leagues/${leagueId}/h2h/${match.series_id}`}
+              style={{ ...sharedStyle, cursor: "pointer" }}
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div key={i} style={sharedStyle}>
+              {inner}
             </div>
           );
         })}
@@ -1252,6 +1266,7 @@ export default function PlayerStatsPage() {
           matches={schedule}
           loading={scheduleLoading}
           role={player.role}
+          leagueId={leagueId}
         />
 
         {/* ================================================================ */}

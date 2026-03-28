@@ -92,6 +92,7 @@ async def lifespan(app: FastAPI):
 
 from routers import players, leagues, market, scoring, trades, roster, activity, bids, teams as teams_router
 from routers import splits as splits_router
+from routers import series as series_router
 
 app = FastAPI(title="Summoner's Fantasy API", version="0.1.0", lifespan=lifespan)
 
@@ -133,6 +134,7 @@ app.include_router(activity.router,     prefix="/activity",  tags=["activity"])
 app.include_router(bids.router,         prefix="/bids",      tags=["bids"])
 app.include_router(splits_router.router,prefix="/splits",    tags=["splits"])
 app.include_router(teams_router.router,  prefix="/teams",     tags=["teams"])
+app.include_router(series_router.router, prefix="/series",    tags=["series"])
 
 
 @app.get("/health")
