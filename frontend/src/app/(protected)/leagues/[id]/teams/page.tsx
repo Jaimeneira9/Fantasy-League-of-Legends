@@ -278,13 +278,21 @@ export default function TeamsPage() {
   // On mount: load splits and default to the active one
   useEffect(() => {
     let cancelled = false;
-    api.splits.list().then((splitList) => {
-      if (cancelled) return;
-      setSplits(splitList);
-      const activeSplit = splitList.find((s) => s.is_active);
-      const defaultId = activeSplit?.id ?? splitList[0]?.id ?? null;
-      setSelectedCompetitionId(defaultId);
-    });
+    api.splits
+      .list()
+      .then((splitList) => {
+        if (cancelled) return;
+        setSplits(splitList);
+        const activeSplit = splitList.find((s) => s.is_active);
+        const defaultId = activeSplit?.id ?? splitList[0]?.id ?? null;
+        setSelectedCompetitionId(defaultId);
+      })
+      .catch((e: Error) => {
+        if (!cancelled) setError(e.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => { cancelled = true; };
   }, []);
 

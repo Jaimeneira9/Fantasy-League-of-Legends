@@ -273,7 +273,7 @@ function PlayerAvatar({ player }: { player: PlayerH2HStats }) {
 
   const containerStyle: React.CSSProperties = {
     width: "100%",
-    aspectRatio: "1",
+    flex: 1,
     background: "#0D0D0D",
     borderRadius: 8,
     overflow: "hidden",
@@ -346,7 +346,7 @@ function PlayerStatRow({
         <span
           style={{
             fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 15,
+            fontSize: 20,
             fontWeight: tie ? 600 : homeWins ? 700 : 500,
             color: tie ? neutralColor : homeWins ? winColor : neutralColor,
           }}
@@ -373,7 +373,7 @@ function PlayerStatRow({
         <span
           style={{
             fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 15,
+            fontSize: 20,
             fontWeight: tie ? 600 : awayWins ? 700 : 500,
             color: tie ? neutralColor : awayWins ? winColor : neutralColor,
           }}
@@ -445,8 +445,7 @@ function PlayersTab({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: 6,
-                  padding: "8px 8px 8px 0",
+                  gap: 0,
                 }}
               >
                 {hp ? (
@@ -455,7 +454,7 @@ function PlayersTab({
                     <p
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
-                        fontSize: 10,
+                        fontSize: 13,
                         fontWeight: 700,
                         color: "#F0E8D0",
                         textAlign: "center",
@@ -463,18 +462,16 @@ function PlayersTab({
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                         width: "100%",
+                        padding: "8px 4px 4px",
                       }}
                     >
                       {hp.name}
                     </p>
                   </>
                 ) : (
-                  <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: "#0D0D0D" }} />
+                  <div style={{ width: "100%", flex: 1, borderRadius: 8, background: "#0D0D0D" }} />
                 )}
               </div>
-
-              {/* Separator: home photo → stats */}
-              <div style={{ width: 1, alignSelf: "stretch", background: "#FCD400", opacity: 0.5, flexShrink: 0 }} />
 
               {/* Stats column — 50% */}
               <div style={{ flex: "0 0 50%", minWidth: 0, padding: "8px 12px" }}>
@@ -517,9 +514,6 @@ function PlayersTab({
                 />
               </div>
 
-              {/* Separator: stats → away photo */}
-              <div style={{ width: 1, alignSelf: "stretch", background: "#FCD400", opacity: 0.5, flexShrink: 0 }} />
-
               {/* Away player column — 25% */}
               <div
                 style={{
@@ -527,8 +521,7 @@ function PlayersTab({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: 6,
-                  padding: "8px 0 8px 8px",
+                  gap: 0,
                 }}
               >
                 {ap ? (
@@ -537,7 +530,7 @@ function PlayersTab({
                     <p
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
-                        fontSize: 10,
+                        fontSize: 13,
                         fontWeight: 700,
                         color: "#F0E8D0",
                         textAlign: "center",
@@ -545,13 +538,14 @@ function PlayersTab({
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                         width: "100%",
+                        padding: "8px 4px 4px",
                       }}
                     >
                       {ap.name}
                     </p>
                   </>
                 ) : (
-                  <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: "#0D0D0D" }} />
+                  <div style={{ width: "100%", flex: 1, borderRadius: 8, background: "#0D0D0D" }} />
                 )}
               </div>
             </div>
