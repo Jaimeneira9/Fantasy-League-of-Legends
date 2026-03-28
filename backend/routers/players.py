@@ -103,29 +103,29 @@ async def scout_players(
 
     player_ids = [p["id"] for p in players]
 
-    # 2. Stats promedio desde player_game_stats
-    # Si se filtra por competition_id, incluimos el join games→series para poder filtrar en Python
+    # 2. Stats desde player_series_stats (nivel serie, no game)
+    # Si se filtra por competition_id, join con series para filtrar en Python
     if competition_id:
         stats_resp = (
-            supabase.table("player_game_stats")
-            .select("player_id, kills, deaths, assists, cs_per_min, gold_diff_15, xp_diff_15, dpm, vision_score, game_points, games(series(competition_id))")
+            supabase.table("player_series_stats")
+            .select("player_id, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_gold_diff_15, avg_xp_diff_15, avg_dpm, avg_vision_score, series_points, series(competition_id)")
             .in_("player_id", player_ids)
             .execute()
         )
         raw_stats = [
             row for row in (stats_resp.data or [])
-            if (row.get("games") or {}).get("series", {}).get("competition_id") == competition_id
+            if (row.get("series") or {}).get("competition_id") == competition_id
         ]
     else:
         stats_resp = (
-            supabase.table("player_game_stats")
-            .select("player_id, kills, deaths, assists, cs_per_min, gold_diff_15, xp_diff_15, dpm, vision_score, game_points")
+            supabase.table("player_series_stats")
+            .select("player_id, avg_kills, avg_deaths, avg_assists, avg_cs_per_min, avg_gold_diff_15, avg_xp_diff_15, avg_dpm, avg_vision_score, series_points")
             .in_("player_id", player_ids)
             .execute()
         )
         raw_stats = stats_resp.data or []
 
-    # Agregar por player_id
+    # Agregar por player_id — cada row ya es un promedio de serie
     buckets: dict[str, list] = defaultdict(list)
     for row in raw_stats:
         buckets[row["player_id"]].append(row)
@@ -227,19 +227,19 @@ async def scout_players(
             image_url=p.get("image_url"),
             current_price=float(p.get("current_price") or 0),
             last_price_change_pct=float(p.get("last_price_change_pct") or 0),
-            avg_kills=avg(rows, "kills"),
-            avg_deaths=avg(rows, "deaths"),
-            avg_assists=avg(rows, "assists"),
-            total_kills=total(rows, "kills"),
-            total_deaths=total(rows, "deaths"),
-            total_assists=total(rows, "assists"),
-            avg_cs_per_min=avg(rows, "cs_per_min"),
-            avg_gold_diff_15=avg(rows, "gold_diff_15"),
-            avg_xp_diff_15=avg(rows, "xp_diff_15"),
-            avg_dpm=avg(rows, "dpm"),
-            avg_vision_score=avg(rows, "vision_score"),
-            avg_points=avg(rows, "game_points"),
-            total_points=total(rows, "game_points"),
+            avg_kills=avg(rows, "avg_kills"),
+            avg_deaths=avg(rows, "avg_deaths"),
+            avg_assists=avg(rows, "avg_assists"),
+            total_kills=total(rows, "avg_kills"),
+            total_deaths=total(rows, "avg_deaths"),
+            total_assists=total(rows, "avg_assists"),
+            avg_cs_per_min=avg(rows, "avg_cs_per_min"),
+            avg_gold_diff_15=avg(rows, "avg_gold_diff_15"),
+            avg_xp_diff_15=avg(rows, "avg_xp_diff_15"),
+            avg_dpm=avg(rows, "avg_dpm"),
+            avg_vision_score=avg(rows, "avg_vision_score"),
+            avg_points=avg(rows, "series_points"),
+            total_points=total(rows, "series_points"),
             owner_name=owner_name,
             clause_amount=float(raw_clause_amount) if raw_clause_amount is not None else None,
             clause_expires_at=clause_data.get("clause_expires_at"),
@@ -248,6 +248,102 @@ async def scout_players(
         ))
 
     return result
+
+
+class GameDetailStat(BaseModel):
+    game_number: int
+    result: int | None
+    kills: int
+    deaths: int
+    assists: int
+    cs_per_min: float
+    dpm: float
+    game_points: float
+
+
+class SeriesGamesResponse(BaseModel):
+    series_id: str
+    games: list[GameDetailStat]
+
+
+@router.get("/{player_id}/series/{series_id}/games", response_model=SeriesGamesResponse)
+async def get_player_series_games(
+    player_id: UUID,
+    series_id: UUID,
+    supabase: Client = Depends(get_supabase),
+) -> SeriesGamesResponse:
+    """Devuelve stats game-by-game de un jugador en una serie específica."""
+    # Resolver team_id del jugador para determinar resultado por game
+    player_resp = (
+        supabase.table("players")
+        .select("team")
+        .eq("id", str(player_id))
+        .single()
+        .execute()
+    )
+    player_team_name: str = (player_resp.data or {}).get("team", "") if player_resp.data else ""
+    player_team_id: str | None = None
+    if player_team_name:
+        all_teams_resp = supabase.table("teams").select("id, name, aliases").execute()
+        for t in (all_teams_resp.data or []):
+            aliases: list[str] = t.get("aliases") or []
+            all_names = [t["name"]] + aliases
+            for alias in all_names:
+                if alias.strip().lower() == player_team_name.strip().lower():
+                    player_team_id = str(t["id"])
+                    break
+            if player_team_id:
+                break
+
+    # Fetch games in this series
+    games_resp = (
+        supabase.table("games")
+        .select("id, game_number, winner_id")
+        .eq("series_id", str(series_id))
+        .execute()
+    )
+    game_rows = games_resp.data or []
+    game_ids = [g["id"] for g in game_rows]
+    game_meta: dict[str, dict] = {g["id"]: g for g in game_rows}
+
+    if not game_ids:
+        return SeriesGamesResponse(series_id=str(series_id), games=[])
+
+    # Fetch player_game_stats for these games
+    pgs_resp = (
+        supabase.table("player_game_stats")
+        .select("game_id, kills, deaths, assists, cs_per_min, dpm, game_points")
+        .eq("player_id", str(player_id))
+        .in_("game_id", game_ids)
+        .execute()
+    )
+    pgs_rows = pgs_resp.data or []
+
+    detail_games: list[GameDetailStat] = []
+    for row in pgs_rows:
+        gid = row["game_id"]
+        meta = game_meta.get(gid) or {}
+        winner_id = meta.get("winner_id")
+        if winner_id is None:
+            result = None
+        elif player_team_id and winner_id == player_team_id:
+            result = 1
+        else:
+            result = 0
+
+        detail_games.append(GameDetailStat(
+            game_number=meta.get("game_number") or 0,
+            result=result,
+            kills=int(row.get("kills") or 0),
+            deaths=int(row.get("deaths") or 0),
+            assists=int(row.get("assists") or 0),
+            cs_per_min=round(float(row.get("cs_per_min") or 0), 2),
+            dpm=round(float(row.get("dpm") or 0), 1),
+            game_points=round(float(row.get("game_points") or 0), 2),
+        ))
+
+    detail_games.sort(key=lambda g: g.game_number)
+    return SeriesGamesResponse(series_id=str(series_id), games=detail_games)
 
 
 @router.get("/{player_id}", response_model=PlayerOut)

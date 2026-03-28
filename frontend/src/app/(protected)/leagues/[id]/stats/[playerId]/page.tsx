@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, type PlayerMatchStat, type PlayerSplitHistory, type Split, type UpcomingMatch, type ClauseInfo } from "@/lib/api";
+import { api, type PlayerMatchStat, type PlayerSplitHistory, type Split, type UpcomingMatch, type ClauseInfo, type GameDetailStat } from "@/lib/api";
 import { RoleIcon, ROLE_COLORS, ROLE_LABEL } from "@/components/RoleIcon";
 import { getRoleColor } from "@/lib/roles";
 import gsap from "gsap";
@@ -952,6 +952,9 @@ export default function PlayerStatsPage() {
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [clauseInfo, setClauseInfo] = useState<ClauseInfo | null>(null);
   const [forSale, setForSale] = useState<boolean>(false);
+  const [expandedSeriesId, setExpandedSeriesId] = useState<string | null>(null);
+  const [gamesCache, setGamesCache] = useState<Map<string, GameDetailStat[]>>(new Map());
+  const [gamesLoading, setGamesLoading] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -1151,8 +1154,8 @@ export default function PlayerStatsPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0A0A0A", color: "#fff" }}>
-      <main style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px 96px" }}>
+    <div style={{ minHeight: "100dvh", background: "#0A0A0A", color: "#fff", overflowX: "hidden" }}>
+      <main style={{ maxWidth: 900, margin: "0 auto", padding: "16px 16px 96px" }}>
 
         {/* Breadcrumb */}
         <nav style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#444", marginBottom: 20 }}>
@@ -1166,14 +1169,14 @@ export default function PlayerStatsPage() {
         {/* ================================================================ */}
         {/* ZONA 1: Player Hero                                              */}
         {/* ================================================================ */}
-        <div style={{
+        <div className="player-hero" style={{
           background: "#111111",
           borderRadius: 12,
-          padding: "24px 28px",
+          padding: "16px",
           border: "1px solid #222",
           display: "flex",
           alignItems: "center",
-          gap: 20,
+          gap: 16,
           marginBottom: 12,
         }}>
           {/* Photo + role badge */}
@@ -1323,13 +1326,18 @@ export default function PlayerStatsPage() {
             padding: "12px 16px",
             border: "1px solid #1E1E1E",
             marginBottom: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            flexWrap: "wrap",
           }}>
-            {/* Week chips */}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
+            {/* Week chips — scrollable horizontal strip */}
+            <div style={{
+              display: "flex",
+              overflowX: "auto",
+              flexWrap: "nowrap",
+              gap: 6,
+              paddingBottom: 4,
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              WebkitOverflowScrolling: "touch",
+            } as React.CSSProperties}>
               {matchStats.map((stat) => {
                 const isActive = stat.week === selectedWeek;
                 return (
@@ -1348,6 +1356,7 @@ export default function PlayerStatsPage() {
                       cursor: "pointer",
                       fontFamily: "'Barlow Condensed', sans-serif",
                       letterSpacing: "0.04em",
+                      flexShrink: 0,
                     }}
                   >
                     S{stat.week}
@@ -1358,7 +1367,7 @@ export default function PlayerStatsPage() {
 
             {/* Active week badge */}
             {activeStat && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                 <div style={{
                   background: activeIsWin ? "#1B3A1B" : "#3A1A1A",
                   color: activeIsWin ? "#4CAF50" : "#EF5350",
@@ -1390,7 +1399,8 @@ export default function PlayerStatsPage() {
         {/* ZONA 3: Stat cards de la jornada seleccionada                    */}
         {/* ================================================================ */}
         {statCards && (
-          <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+          <div style={{ overflowX: "auto", marginBottom: 12, WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
+          <div style={{ display: "flex", gap: 10, minWidth: "max-content" }}>
             {statCards.map((card) => (
               <div
                 key={card.label}
@@ -1452,12 +1462,13 @@ export default function PlayerStatsPage() {
               </div>
             ))}
           </div>
+          </div>
         )}
 
         {/* ================================================================ */}
         {/* ZONA 4: Dos columnas                                             */}
         {/* ================================================================ */}
-        <div style={{ display: "flex", gap: 20 }}>
+        <div className="flex flex-col sm:flex-row gap-5">
 
           {/* Col izquierda: Selector de splits + Bar chart */}
           <div style={{
@@ -1469,7 +1480,7 @@ export default function PlayerStatsPage() {
           }}>
             {/* Selector de splits — chips custom */}
             {splits.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, overflowX: "auto", flexWrap: "nowrap", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="https://kjtifrtuknxtuuiyflza.supabase.co/storage/v1/object/public/FotosEquiposLec/lec.webp"
@@ -1498,6 +1509,7 @@ export default function PlayerStatsPage() {
                         cursor: "pointer",
                         fontFamily: "'Barlow Condensed', sans-serif",
                         letterSpacing: "0.04em",
+                        flexShrink: 0,
                       }}
                     >
                       {split.name}
@@ -1580,84 +1592,240 @@ export default function PlayerStatsPage() {
                 {[...matchStats].reverse().map((stat) => {
                   const isActive = stat.week === selectedWeek;
                   const isWin = stat.result === 1;
-                  const kda = `${stat.kills}/${stat.deaths}/${stat.assists}`;
+                  const kda = `${typeof stat.kills === 'number' ? stat.kills.toFixed(1) : stat.kills}/${typeof stat.deaths === 'number' ? stat.deaths.toFixed(1) : stat.deaths}/${typeof stat.assists === 'number' ? stat.assists.toFixed(1) : stat.assists}`;
                   const rival = stat.matches
                     ? (stat.matches.team_1 === player.team ? stat.matches.team_2 : stat.matches.team_1)
                     : null;
+                  const seriesId = stat.series_id ?? null;
+                  const isExpanded = seriesId !== null && expandedSeriesId === seriesId;
+                  const isLoadingGames = seriesId !== null && gamesLoading === seriesId;
+                  const cachedGames = seriesId ? gamesCache.get(seriesId) : undefined;
+
+                  const handleToggleExpand = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (!seriesId) return;
+                    if (isExpanded) {
+                      setExpandedSeriesId(null);
+                      return;
+                    }
+                    setExpandedSeriesId(seriesId);
+                    if (!gamesCache.has(seriesId)) {
+                      setGamesLoading(seriesId);
+                      api.players.seriesGames(playerId, seriesId)
+                        .then((resp) => {
+                          setGamesCache((prev) => {
+                            const next = new Map(prev);
+                            next.set(seriesId, resp.games);
+                            return next;
+                          });
+                        })
+                        .catch(() => {
+                          setGamesCache((prev) => {
+                            const next = new Map(prev);
+                            next.set(seriesId, []);
+                            return next;
+                          });
+                        })
+                        .finally(() => setGamesLoading(null));
+                    }
+                  };
 
                   return (
-                    <div
-                      key={stat.week}
-                      onClick={() => setSelectedWeek(stat.week)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 10px",
-                        borderRadius: 8,
-                        cursor: "pointer",
-                        background: isActive ? "#1E1A00" : "transparent",
-                        border: isActive ? "1px solid rgba(252,212,0,0.25)" : "1px solid transparent",
-                        transition: "background 0.1s",
-                      }}
-                    >
-                      {/* Week badge */}
-                      <div style={{
-                        background: "#1A1A1A",
-                        borderRadius: 6,
-                        padding: "3px 8px",
-                        fontSize: 12,
-                        fontFamily: "'Barlow Condensed', sans-serif",
-                        fontWeight: 700,
-                        color: isActive ? "#FCD400" : "#888",
-                        flexShrink: 0,
-                        minWidth: 36,
-                        textAlign: "center",
-                      }}>
-                        S{stat.week}
-                      </div>
+                    <div key={stat.week} style={{ display: "flex", flexDirection: "column" }}>
+                      <div
+                        onClick={() => setSelectedWeek(stat.week)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "8px 10px",
+                          borderRadius: isExpanded ? "8px 8px 0 0" : 8,
+                          cursor: "pointer",
+                          background: isActive ? "#1E1A00" : "transparent",
+                          border: isActive ? "1px solid rgba(252,212,0,0.25)" : "1px solid transparent",
+                          transition: "background 0.1s",
+                        }}
+                      >
+                        {/* Week badge */}
+                        <div style={{
+                          background: "#1A1A1A",
+                          borderRadius: 6,
+                          padding: "3px 8px",
+                          fontSize: 12,
+                          fontFamily: "'Barlow Condensed', sans-serif",
+                          fontWeight: 700,
+                          color: isActive ? "#FCD400" : "#888",
+                          flexShrink: 0,
+                          minWidth: 36,
+                          textAlign: "center",
+                        }}>
+                          S{stat.week}
+                        </div>
 
-                      {/* W/L badge */}
-                      <div style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 4,
-                        background: isWin ? "#1B3A1B" : "#3A1A1A",
-                        color: isWin ? "#4CAF50" : "#EF5350",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}>
-                        {isWin ? "W" : "L"}
-                      </div>
+                        {/* W/L badge */}
+                        <div style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 4,
+                          background: isWin ? "#1B3A1B" : "#3A1A1A",
+                          color: isWin ? "#4CAF50" : "#EF5350",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}>
+                          {isWin ? "W" : "L"}
+                        </div>
 
-                      {/* Rival + KDA */}
-                      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                        {rival && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={`https://kjtifrtuknxtuuiyflza.supabase.co/storage/v1/object/public/FotosEquiposLec/${rival.toLowerCase().replace(/ /g, "-")}.webp`}
-                            alt={rival}
-                            style={{ width: 20, height: 20, objectFit: "contain", flexShrink: 0 }}
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                          />
+                        {/* Rival + KDA */}
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                          {rival && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={`https://kjtifrtuknxtuuiyflza.supabase.co/storage/v1/object/public/FotosEquiposLec/${rival.toLowerCase().replace(/ /g, "-")}.webp`}
+                              alt={rival}
+                              style={{ width: 20, height: 20, objectFit: "contain", flexShrink: 0 }}
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
+                          )}
+                          <div style={{ fontSize: 11, color: "#444" }}>{kda}</div>
+                        </div>
+
+                        {/* Puntos */}
+                        <div style={{
+                          fontFamily: "'Barlow Condensed', sans-serif",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: isWin ? "#FCD400" : "#555",
+                          flexShrink: 0,
+                        }}>
+                          +{stat.fantasy_points.toFixed(1)}
+                        </div>
+
+                        {/* Expand chevron */}
+                        {seriesId && (
+                          <div
+                            onClick={handleToggleExpand}
+                            style={{
+                              fontSize: 10,
+                              color: isExpanded ? "#FCD400" : "#444",
+                              cursor: "pointer",
+                              flexShrink: 0,
+                              padding: "2px 4px",
+                              transition: "transform 0.15s",
+                              transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                            }}
+                          >
+                            ▶
+                          </div>
                         )}
-                        <div style={{ fontSize: 11, color: "#444" }}>{kda}</div>
                       </div>
 
-                      {/* Puntos */}
-                      <div style={{
-                        fontFamily: "'Barlow Condensed', sans-serif",
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: isWin ? "#FCD400" : "#555",
-                        flexShrink: 0,
-                      }}>
-                        +{stat.fantasy_points.toFixed(1)}
-                      </div>
+                      {/* Accordion: game-by-game detail */}
+                      {isExpanded && (
+                        <div style={{
+                          background: "#1a1a1a",
+                          border: "1px solid #2a2a2a",
+                          borderTop: "none",
+                          borderRadius: "0 0 8px 8px",
+                          padding: "8px 10px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 4,
+                        }}>
+                          {isLoadingGames ? (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 0" }}>
+                              <div style={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: "50%",
+                                border: "2px solid #333",
+                                borderTopColor: "#FCD400",
+                                animation: "spin 0.7s linear infinite",
+                              }} />
+                            </div>
+                          ) : cachedGames && cachedGames.length > 0 ? (
+                            <>
+                              {/* Header */}
+                              <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "40px 28px 1fr 52px 44px 44px",
+                                gap: 4,
+                                fontSize: 9,
+                                color: "#444",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
+                                paddingBottom: 4,
+                                borderBottom: "1px solid #222",
+                              }}>
+                                <span>Game</span>
+                                <span></span>
+                                <span>K/D/A</span>
+                                <span style={{ textAlign: "right" }}>CS/min</span>
+                                <span style={{ textAlign: "right" }}>DPM</span>
+                                <span style={{ textAlign: "right" }}>Pts</span>
+                              </div>
+                              {cachedGames.map((g) => {
+                                const gWin = g.result === 1;
+                                return (
+                                  <div
+                                    key={g.game_number}
+                                    style={{
+                                      display: "grid",
+                                      gridTemplateColumns: "40px 28px 1fr 52px 44px 44px",
+                                      gap: 4,
+                                      alignItems: "center",
+                                      fontSize: 11,
+                                      color: "#ccc",
+                                      fontFamily: "'Space Grotesk', sans-serif",
+                                    }}
+                                  >
+                                    <span style={{ color: "#555", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700 }}>
+                                      G{g.game_number}
+                                    </span>
+                                    <div style={{
+                                      width: 20,
+                                      height: 20,
+                                      borderRadius: 3,
+                                      background: g.result === null ? "#222" : gWin ? "#1B3A1B" : "#3A1A1A",
+                                      color: g.result === null ? "#555" : gWin ? "#4CAF50" : "#EF5350",
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}>
+                                      {g.result === null ? "?" : gWin ? "W" : "L"}
+                                    </div>
+                                    <span style={{ color: "#666", fontSize: 11 }}>
+                                      {g.kills}/{g.deaths}/{g.assists}
+                                    </span>
+                                    <span style={{ textAlign: "right", color: "#888", fontSize: 11 }}>
+                                      {g.cs_per_min.toFixed(1)}
+                                    </span>
+                                    <span style={{ textAlign: "right", color: "#888", fontSize: 11 }}>
+                                      {Math.round(g.dpm)}
+                                    </span>
+                                    <span style={{
+                                      textAlign: "right",
+                                      fontFamily: "'Barlow Condensed', sans-serif",
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      color: gWin ? "#FCD400" : "#555",
+                                    }}>
+                                      {g.game_points.toFixed(1)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          ) : (
+                            <p style={{ fontSize: 11, color: "#444", textAlign: "center", margin: 0 }}>Sin datos de games</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
