@@ -269,9 +269,12 @@ def _parse_bool_int(value: str | None) -> bool:
 # Patrón para extraer game_id del link markdown.
 # El formato real incluye un title attribute opcional:
 #   [Team A vs Team B](../game/stats/12345/page-game/ "Team A vs Team B stats")
-# Por eso usamos [^)]* para consumir todo hasta el cierre del paréntesis.
+#   [Team A vs Team B](../game/stats/12345/page-preview/ "Team A vs Team B Preview")
+#   [Team A vs Team B](../game/stats/12345/page-summary/ "Team A vs Team B summary")
+# Por eso usamos page-\w+/ para aceptar cualquier sufijo de página, y [^)]* para
+# consumir el title attribute opcional hasta el cierre del paréntesis.
 _MATCHLIST_LINK_RE = re.compile(
-    r"\[(.+?)\]\(\.\./game/stats/(\d+)/page-game/[^)]*\)"
+    r"\[(.+?)\]\(\.\./game/stats/(\d+)/page-\w+/[^)]*\)"
 )
 
 # Patrón para extraer la semana: WEEK4 → 4
@@ -280,8 +283,13 @@ _WEEK_RE = re.compile(r"WEEK(\d+)", re.IGNORECASE)
 # Patrón para la fecha: dd/mm/yyyy o yyyy-mm-dd
 _DATE_RE = re.compile(r"(\d{2})/(\d{2})/(\d{4})|(\d{4})-(\d{2})-(\d{2})")
 
-# Score como "(2-1)" para detectar series
-_SCORE_RE = re.compile(r"\((\d+)-(\d+)\)")
+# Score de serie en el nuevo formato: "2 - 1", "1 - 0", etc. (con espacios)
+# El antiguo formato era "(2-1)" pero Spring 2026 usa celdas planas.
+# También aceptamos el formato sin espacios por retrocompatibilidad.
+# IMPORTANTE: limitamos a 1 dígito para evitar falsos positivos con fechas
+# (ej. "2026-03-28") que también contienen dígitos separados por guión.
+# Los scores de BO series nunca superan 3-0, siempre son 1 dígito.
+_SCORE_RE = re.compile(r"\b([0-3])\s*-\s*([0-3])\b")
 
 
 def _parse_matchlist(markdown: str) -> list[GameEntry]:
@@ -289,11 +297,23 @@ def _parse_matchlist(markdown: str) -> list[GameEntry]:
     Parsea el markdown de la matchlist de gol.gg.
 
     Cada fila de la tabla tiene la forma:
-      | [Team A vs Team B](../game/stats/{game_id}/page-game/) | Winner | Score (1-0) | Loser | WEEK{n} | patch | date |
+      | [Team A vs Team B](../game/stats/{game_id}/page-{suffix}/) | Winner | Score | Loser | WEEK{n} | patch | date |
 
-    Nota: La matchlist lista SERIES, cada serie con un link que apunta al
-    primer game. Para obtener todos los games de la serie necesitamos
-    detectar el score y construir los game_ids subsiguientes.
+    El sufijo del link varía según el estado de la serie:
+      - page-game/     → completada (formato anterior a Spring 2026)
+      - page-summary/  → completada o en progreso (Spring 2026+)
+      - page-preview/  → upcoming (aún no jugada)
+
+    El game_id extraído siempre se usa con page-game/ y page-fullstats/
+    para fetchear stats — el sufijo del link de la matchlist solo se usa
+    para matchear la fila.
+
+    Series que se SALTEAN (no se ingresan):
+      - Sin score numérico (\-): upcoming, no jugada todavía.
+      - Score parcial con max < 2 (ej. "1 - 0"): BO3 en progreso.
+
+    Series que se INGRESAN: score donde algún equipo llega a 2+ wins
+    (ej. "2 - 0", "2 - 1").
 
     ADVERTENCIA: gol.gg NO garantiza IDs consecutivos entre games de una misma
     serie. El ID del link apunta al primer game; los games 2, 3, etc. se asumen
@@ -350,14 +370,43 @@ def _parse_matchlist(markdown: str) -> list[GameEntry]:
             # cells[0] contiene el link completo, cells[1] es el winner
             winner = cells[1].strip()
 
-        # Extraer score para detectar cuántos games tiene la serie
+        # Extraer score para detectar cuántos games tiene la serie.
+        #
+        # Formato nuevo (Spring 2026):
+        #   "\-"     → serie sin jugar (upcoming)    → skip
+        #   "1 - 0"  → serie en progreso (BO3 inc.)  → skip
+        #   "2 - 0"  → serie completa                → ingestar
+        #   "2 - 1"  → serie completa                → ingestar
+        #
+        # Una serie está completa cuando alguno de los dos equipos llega a 2
+        # victorias (BO3) o a 1 victoria (BO1 con score "1 - 0" que YA terminó).
+        # Para distinguir BO1 completo de BO3 en progreso usamos la regla:
+        # max(score_a, score_b) >= 2  → siempre completo
+        # max(score_a, score_b) == 1  → completo solo si min == 0 Y es BO1,
+        #   pero gol.gg no expone el formato de serie; por seguridad SKIP
+        #   cualquier score "1 - 0" porque podría ser un BO3 a mitad.
+        #
+        # Por lo tanto: skip si no hay score match, o si max < 2.
         score_match = _SCORE_RE.search(line)
-        if score_match:
-            score_a = int(score_match.group(1))
-            score_b = int(score_match.group(2))
-            total_games = score_a + score_b
-        else:
-            total_games = 1
+        if not score_match:
+            # Sin score numérico → upcoming (\-) → skip
+            logger.debug("Skipping unplayed/upcoming series for game %s", game_id)
+            continue
+
+        score_a = int(score_match.group(1))
+        score_b = int(score_match.group(2))
+
+        if max(score_a, score_b) < 2:
+            # Score parcial (ej. 1-0 en BO3 en progreso) → skip
+            logger.debug(
+                "Skipping in-progress series %s (score %d-%d)",
+                game_id,
+                score_a,
+                score_b,
+            )
+            continue
+
+        total_games = score_a + score_b
 
         # Generar un GameEntry por cada game de la serie.
         # ASUNCIÓN (no garantizada): gol.gg asigna IDs consecutivos.
