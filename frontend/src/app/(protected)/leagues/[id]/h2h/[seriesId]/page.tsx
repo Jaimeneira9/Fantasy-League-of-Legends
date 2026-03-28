@@ -273,7 +273,7 @@ function PlayerAvatar({ player }: { player: PlayerH2HStats }) {
 
   const containerStyle: React.CSSProperties = {
     width: "100%",
-    aspectRatio: "1",
+    flex: 1,
     background: "#0D0D0D",
     borderRadius: 8,
     overflow: "hidden",
@@ -446,7 +446,7 @@ function PlayersTab({
                   flexDirection: "column",
                   alignItems: "center",
                   gap: 6,
-                  padding: "8px 8px 8px 0",
+                  padding: "0 0 8px 0",
                 }}
               >
                 {hp ? (
@@ -469,7 +469,7 @@ function PlayersTab({
                     </p>
                   </>
                 ) : (
-                  <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: "#0D0D0D" }} />
+                  <div style={{ width: "100%", flex: 1, borderRadius: 8, background: "#0D0D0D" }} />
                 )}
               </div>
 
@@ -528,7 +528,7 @@ function PlayersTab({
                   flexDirection: "column",
                   alignItems: "center",
                   gap: 6,
-                  padding: "8px 0 8px 8px",
+                  padding: "0 0 8px 0",
                 }}
               >
                 {ap ? (
@@ -551,7 +551,7 @@ function PlayersTab({
                     </p>
                   </>
                 ) : (
-                  <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: "#0D0D0D" }} />
+                  <div style={{ width: "100%", flex: 1, borderRadius: 8, background: "#0D0D0D" }} />
                 )}
               </div>
             </div>
