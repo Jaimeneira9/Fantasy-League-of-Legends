@@ -267,39 +267,25 @@ function TeamStatsTab({
 // Player avatar (photo with initial fallback)
 // ---------------------------------------------------------------------------
 
-function PlayerAvatar({
-  player,
-  size = 80,
-}: {
-  player: PlayerH2HStats;
-  size?: number;
-}) {
+function PlayerAvatar({ player }: { player: PlayerH2HStats }) {
   const [failed, setFailed] = useState(false);
   const initial = player.name.charAt(0).toUpperCase();
 
   const containerStyle: React.CSSProperties = {
-    width: size,
-    height: size,
+    width: "100%",
+    aspectRatio: "1",
     background: "#0D0D0D",
-    borderRadius: 10,
+    borderRadius: 8,
+    overflow: "hidden",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
-    overflow: "hidden",
   };
 
   if (failed) {
     return (
       <div style={containerStyle}>
-        <span
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: size * 0.38,
-            fontWeight: 700,
-            color: "#555555",
-          }}
-        >
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 700, color: "#555555" }}>
           {initial}
         </span>
       </div>
@@ -313,13 +299,7 @@ function PlayerAvatar({
         src={playerPhotoUrl(player)}
         alt={player.name}
         onError={() => setFailed(true)}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          objectPosition: "center top",
-          display: "block",
-        }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
       />
     </div>
   );
@@ -457,27 +437,21 @@ function PlayersTab({
             </p>
 
             {/* Main layout: photo | stats | photo */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 12,
-              }}
-            >
-              {/* Home player column */}
+            <div style={{ display: "flex", alignItems: "stretch" }}>
+              {/* Home player column — 25% */}
               <div
                 style={{
+                  flex: "0 0 25%",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   gap: 6,
-                  flexShrink: 0,
-                  width: 80,
+                  padding: "8px 8px 8px 0",
                 }}
               >
                 {hp ? (
                   <>
-                    <PlayerAvatar player={hp} size={80} />
+                    <PlayerAvatar player={hp} />
                     <p
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
@@ -488,29 +462,22 @@ function PlayersTab({
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        maxWidth: 80,
+                        width: "100%",
                       }}
                     >
                       {hp.name}
                     </p>
                   </>
                 ) : (
-                  <div
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 10,
-                      background: "#0D0D0D",
-                    }}
-                  />
+                  <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: "#0D0D0D" }} />
                 )}
               </div>
 
               {/* Separator: home photo → stats */}
               <div style={{ width: 1, alignSelf: "stretch", background: "#FCD400", opacity: 0.5, flexShrink: 0 }} />
 
-              {/* Stats column */}
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Stats column — 50% */}
+              <div style={{ flex: "0 0 50%", minWidth: 0, padding: "8px 12px" }}>
                 <PlayerStatRow
                   label="KDA"
                   homeVal={hp?.avg_kda ?? null}
@@ -553,20 +520,20 @@ function PlayersTab({
               {/* Separator: stats → away photo */}
               <div style={{ width: 1, alignSelf: "stretch", background: "#FCD400", opacity: 0.5, flexShrink: 0 }} />
 
-              {/* Away player column */}
+              {/* Away player column — 25% */}
               <div
                 style={{
+                  flex: "0 0 25%",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   gap: 6,
-                  flexShrink: 0,
-                  width: 80,
+                  padding: "8px 0 8px 8px",
                 }}
               >
                 {ap ? (
                   <>
-                    <PlayerAvatar player={ap} size={80} />
+                    <PlayerAvatar player={ap} />
                     <p
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
@@ -577,21 +544,14 @@ function PlayersTab({
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        maxWidth: 80,
+                        width: "100%",
                       }}
                     >
                       {ap.name}
                     </p>
                   </>
                 ) : (
-                  <div
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 10,
-                      background: "#0D0D0D",
-                    }}
-                  />
+                  <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: "#0D0D0D" }} />
                 )}
               </div>
             </div>
