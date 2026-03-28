@@ -500,7 +500,7 @@ function LoadingSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function H2HPage() {
-  const { seriesId } = useParams<{ id: string; seriesId: string }>();
+  const { id: leagueId, seriesId } = useParams<{ id: string; seriesId: string }>();
   const [data, setData] = useState<H2HResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -509,7 +509,7 @@ export default function H2HPage() {
   useEffect(() => {
     let cancelled = false;
     api.series
-      .h2h(seriesId)
+      .h2h(seriesId, leagueId)
       .then((d) => {
         if (!cancelled) setData(d);
       })

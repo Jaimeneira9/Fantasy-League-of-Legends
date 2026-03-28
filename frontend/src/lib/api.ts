@@ -453,7 +453,7 @@ export const api = {
   series: {
     calendar: (leagueId: string) =>
       req<CalendarResponse>(`/series/${leagueId}/calendar`),
-    h2h: (seriesId: string) =>
-      req<H2HResponse>(`/series/${seriesId}/h2h`),
+    h2h: (seriesId: string, leagueId: string) =>
+      req<H2HResponse>(`/series/${seriesId}/h2h?league_id=${leagueId}`),
   },
 };

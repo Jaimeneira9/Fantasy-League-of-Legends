@@ -311,13 +311,16 @@ def get_calendar(
 @router.get("/{series_id}/h2h", response_model=H2HResponse)
 def get_h2h(
     series_id: UUID,
+    league_id: UUID,
     supabase: Client = Depends(get_supabase),
     user: dict = Depends(get_current_user),
 ) -> H2HResponse:
     """
     Returns head-to-head data for a specific series.
-    Auth check: user must be member of at least one league (done via get_current_user).
+    Auth check: user must be a member of the given league.
     """
+    _check_membership(supabase, str(league_id), user["id"])
+
     # 1. Fetch the series record
     series_resp = (
         supabase.table("series")
