@@ -78,10 +78,10 @@ function CreateForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
       onSubmit={handleSubmit}
       className="rounded-xl p-5 space-y-4 animate-fade-in"
       style={{
-        background: "white",
+        background: "var(--bg-panel)",
         border: "1px solid var(--border-medium)",
         borderRadius: "12px",
-        boxShadow: "0 2px 12px rgba(26,28,26,0.06)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
       }}
     >
       <h2 className="font-bold" style={{ color: "var(--text-primary)" }}>Nueva liga</h2>
@@ -192,10 +192,10 @@ function JoinForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => vo
       onSubmit={handleSubmit}
       className="rounded-xl p-5 space-y-4 animate-fade-in"
       style={{
-        background: "white",
+        background: "var(--bg-panel)",
         border: "1px solid var(--border-medium)",
         borderRadius: "12px",
-        boxShadow: "0 2px 12px rgba(26,28,26,0.06)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
       }}
     >
       <h2 className="font-bold" style={{ color: "var(--text-primary)" }}>Unirse a una liga</h2>
