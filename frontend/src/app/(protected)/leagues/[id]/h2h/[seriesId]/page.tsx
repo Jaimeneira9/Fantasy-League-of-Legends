@@ -164,15 +164,16 @@ function StatRow({
         </span>
       </div>
       {/* Label */}
-      <div style={{ textAlign: "center", minWidth: 90 }}>
+      <div style={{ textAlign: "center", minWidth: 72 }}>
         <span
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: 700,
             color: "#333333",
             textTransform: "uppercase",
-            letterSpacing: "0.08em",
+            letterSpacing: "0.06em",
+            whiteSpace: "nowrap",
           }}
         >
           {label}
@@ -233,7 +234,7 @@ function TeamStatsTab({
             style={{ width: 24, height: 24, objectFit: "contain", display: "inline-block" }}
           />
         </div>
-        <div style={{ minWidth: 90 }} />
+        <div style={{ minWidth: 72 }} />
         <div style={{ textAlign: "left" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -338,7 +339,7 @@ function PlayersTab({
           <div
             key={role}
             style={{
-              padding: "14px 20px",
+              padding: "12px 14px",
               borderBottom: idx < ROLE_ORDER.length - 1 ? "1px solid #1A1A1A" : "none",
             }}
           >
@@ -368,16 +369,19 @@ function PlayersTab({
               }}
             >
               {/* Home player */}
-              <div style={{ textAlign: "right" }}>
+              <div style={{ textAlign: "right", minWidth: 0, overflow: "hidden" }}>
                 {hp ? (
                   <>
                     <p
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: 700,
                         color: "#F0E8D0",
                         marginBottom: 2,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {hp.name}
@@ -385,24 +389,25 @@ function PlayersTab({
                     <p
                       style={{
                         fontFamily: "'Barlow Condensed', sans-serif",
-                        fontSize: 11,
+                        fontSize: 10,
                         color: "#555",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      {fmt(hp.avg_kda, 2)} KDA · {fmt(hp.avg_cs_per_min, 1)} CS · {Math.round(hp.avg_dpm)} DPM
+                      {fmt(hp.avg_kda, 2)} KDA · {fmt(hp.avg_cs_per_min, 1)} CS
                     </p>
                   </>
                 ) : (
-                  <p style={{ fontSize: 12, color: "#444" }}>Sin datos</p>
+                  <p style={{ fontSize: 11, color: "#444" }}>Sin datos</p>
                 )}
               </div>
 
               {/* VS divider */}
-              <div style={{ textAlign: "center", paddingTop: 2 }}>
+              <div style={{ textAlign: "center", paddingTop: 2, flexShrink: 0 }}>
                 <span
                   style={{
                     fontFamily: "'Barlow Condensed', sans-serif",
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: 700,
                     color: "#333333",
                     letterSpacing: "0.06em",
@@ -413,16 +418,19 @@ function PlayersTab({
               </div>
 
               {/* Away player */}
-              <div style={{ textAlign: "left" }}>
+              <div style={{ textAlign: "left", minWidth: 0, overflow: "hidden" }}>
                 {ap ? (
                   <>
                     <p
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: 700,
                         color: "#F0E8D0",
                         marginBottom: 2,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {ap.name}
@@ -430,15 +438,16 @@ function PlayersTab({
                     <p
                       style={{
                         fontFamily: "'Barlow Condensed', sans-serif",
-                        fontSize: 11,
+                        fontSize: 10,
                         color: "#555",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      {fmt(ap.avg_kda, 2)} KDA · {fmt(ap.avg_cs_per_min, 1)} CS · {Math.round(ap.avg_dpm)} DPM
+                      {fmt(ap.avg_kda, 2)} KDA · {fmt(ap.avg_cs_per_min, 1)} CS
                     </p>
                   </>
                 ) : (
-                  <p style={{ fontSize: 12, color: "#444" }}>Sin datos</p>
+                  <p style={{ fontSize: 11, color: "#444" }}>Sin datos</p>
                 )}
               </div>
             </div>
@@ -449,8 +458,8 @@ function PlayersTab({
                 style={{
                   display: "flex",
                   justifyContent: "center",
-                  gap: 16,
-                  marginTop: 8,
+                  gap: 10,
+                  marginTop: 6,
                   flexWrap: "wrap",
                 }}
               >
@@ -565,20 +574,25 @@ export default function H2HPage() {
                 }}
               >
                 {/* Home team */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flex: 1, minWidth: 0 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={teamLogoUrl(data.team_home.team_name)}
                     alt={data.team_home.team_name}
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    style={{ width: 44, height: 44, objectFit: "contain" }}
+                    style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }}
                   />
                   <span
                     style={{
                       fontFamily: "'Space Grotesk', sans-serif",
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: 700,
                       color: "#F0E8D0",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: "100%",
+                      textAlign: "center",
                     }}
                   >
                     {data.team_home.team_name}
@@ -591,18 +605,20 @@ export default function H2HPage() {
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    gap: 6,
+                    gap: 4,
                     flexShrink: 0,
+                    minWidth: 56,
                   }}
                 >
                   <StatusBadge status={data.status} result={data.result} />
                   <span
                     style={{
                       fontFamily: "'Barlow Condensed', sans-serif",
-                      fontSize: 11,
+                      fontSize: 10,
                       color: "#444",
                       textTransform: "capitalize",
                       letterSpacing: "0.03em",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {formatDate(data.date)}
@@ -610,20 +626,25 @@ export default function H2HPage() {
                 </div>
 
                 {/* Away team */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flex: 1, minWidth: 0 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={teamLogoUrl(data.team_away.team_name)}
                     alt={data.team_away.team_name}
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    style={{ width: 44, height: 44, objectFit: "contain" }}
+                    style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }}
                   />
                   <span
                     style={{
                       fontFamily: "'Space Grotesk', sans-serif",
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: 700,
                       color: "#F0E8D0",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: "100%",
+                      textAlign: "center",
                     }}
                   >
                     {data.team_away.team_name}
@@ -641,7 +662,8 @@ export default function H2HPage() {
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     style={{
-                      padding: "8px 18px",
+                      flex: 1,
+                      padding: "8px 12px",
                       borderRadius: 20,
                       border: isActive ? "1px solid rgba(252,212,0,0.5)" : "1px solid #2A2A2A",
                       background: isActive ? "rgba(252,212,0,0.12)" : "#111111",
@@ -652,6 +674,9 @@ export default function H2HPage() {
                       cursor: "pointer",
                       transition: "all 150ms ease",
                       textTransform: "capitalize",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {tab === "equipos" ? "Equipos" : "Jugadores"}

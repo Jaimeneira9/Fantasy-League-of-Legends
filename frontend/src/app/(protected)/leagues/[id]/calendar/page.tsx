@@ -59,10 +59,10 @@ function StatusBadge({ status, result }: { status: string; result: string | null
       <span
         style={{
           fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 18,
+          fontSize: 16,
           fontWeight: 700,
           color: "#F0E8D0",
-          minWidth: 48,
+          minWidth: 36,
           textAlign: "center",
           letterSpacing: "0.04em",
         }}
@@ -77,15 +77,15 @@ function StatusBadge({ status, result }: { status: string; result: string | null
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 5,
-          minWidth: 80,
+          gap: 4,
+          minWidth: 64,
           justifyContent: "center",
         }}
       >
         <span
           style={{
-            width: 7,
-            height: 7,
+            width: 6,
+            height: 6,
             borderRadius: "50%",
             background: "#FCD400",
             animation: "pulse 1.5s ease-in-out infinite",
@@ -95,10 +95,10 @@ function StatusBadge({ status, result }: { status: string; result: string | null
         <span
           style={{
             fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: 700,
             color: "#FCD400",
-            letterSpacing: "0.08em",
+            letterSpacing: "0.06em",
             textTransform: "uppercase",
           }}
         >
@@ -112,10 +112,10 @@ function StatusBadge({ status, result }: { status: string; result: string | null
     <span
       style={{
         fontFamily: "'Barlow Condensed', sans-serif",
-        fontSize: 20,
+        fontSize: 16,
         fontWeight: 700,
         color: "#555555",
-        minWidth: 48,
+        minWidth: 36,
         textAlign: "center",
         letterSpacing: "0.04em",
       }}
@@ -142,10 +142,11 @@ function TeamDisplay({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 8,
+        gap: 6,
         flex: 1,
         flexDirection: isLeft ? "row" : "row-reverse",
         minWidth: 0,
+        overflow: "hidden",
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -156,8 +157,8 @@ function TeamDisplay({
           e.currentTarget.style.display = "none";
         }}
         style={{
-          width: 28,
-          height: 28,
+          width: 24,
+          height: 24,
           objectFit: "contain",
           flexShrink: 0,
           background: "transparent",
@@ -166,13 +167,14 @@ function TeamDisplay({
       <span
         style={{
           fontFamily: "'Space Grotesk', sans-serif",
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: 700,
           color: "#F0E8D0",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
           textAlign: isLeft ? "left" : "right",
+          minWidth: 0,
         }}
       >
         {name}
@@ -201,7 +203,7 @@ function MatchCard({
         background: "#111111",
         border: "1px solid #1E1E1E",
         borderRadius: 10,
-        padding: "12px 16px",
+        padding: "12px 12px",
         cursor: "pointer",
         transition: "border-color 150ms ease, background 150ms ease",
         display: "flex",
@@ -218,10 +220,10 @@ function MatchCard({
       }}
     >
       {/* Main row: home — status — away */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <TeamDisplay name={entry.team_home} align="left" />
 
-        <div style={{ display: "flex", justifyContent: "center", flexShrink: 0, minWidth: 80 }}>
+        <div style={{ display: "flex", justifyContent: "center", flexShrink: 0, minWidth: 56 }}>
           <StatusBadge status={entry.status} result={entry.result} />
         </div>
 
@@ -233,7 +235,7 @@ function MatchCard({
         <span
           style={{
             fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 11,
+            fontSize: 12,
             color: "#555555",
             textTransform: "capitalize",
             letterSpacing: "0.03em",

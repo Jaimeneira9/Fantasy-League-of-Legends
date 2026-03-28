@@ -216,8 +216,6 @@ def _build_players_stats(
             .execute()
         )
         rows = pss_resp.data or []
-        if not rows:
-            continue
 
         kills_list = [float(r["avg_kills"]) for r in rows if r.get("avg_kills") is not None]
         deaths_list = [float(r["avg_deaths"]) for r in rows if r.get("avg_deaths") is not None]
@@ -228,7 +226,7 @@ def _build_players_stats(
         avg_kills = _safe_avg(kills_list)
         avg_deaths = _safe_avg(deaths_list)
         avg_assists = _safe_avg(assists_list)
-        avg_kda = round((avg_kills + avg_assists) / max(avg_deaths, 1), 2)
+        avg_kda = round((avg_kills + avg_assists) / max(avg_deaths, 1), 2) if rows else 0.0
 
         result.append(
             PlayerH2HStats(
