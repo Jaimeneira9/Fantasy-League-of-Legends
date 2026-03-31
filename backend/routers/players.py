@@ -331,6 +331,7 @@ async def get_player_series_games(
         supabase.table("games")
         .select("id, game_number, winner_id")
         .eq("series_id", str(series_id))
+        .order("game_number", desc=False)
         .execute()
     )
     game_rows = games_resp.data or []
