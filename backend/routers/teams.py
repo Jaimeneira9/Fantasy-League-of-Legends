@@ -80,11 +80,31 @@ def get_team_standings(
     competition_id = competition["id"]
     competition_name = competition["name"]
 
-    # 2. Traer todos los equipos de esa competition (históricos también)
+    # 2. Traer todos los equipos de esa competition via series
+    # Los teams tienen competition_id apuntando a otra competition (ej: LEC Versus),
+    # pero las series sí referencian el competition_id correcto. Por eso obtenemos
+    # los team IDs desde series y después buscamos los teams por esos IDs.
+    series_ids_resp = (
+        supabase.table("series")
+        .select("team_home_id, team_away_id")
+        .eq("competition_id", competition_id)
+        .execute()
+    )
+    series_rows = series_ids_resp.data or []
+    team_ids_from_series: set[str] = set()
+    for row in series_rows:
+        if row.get("team_home_id"):
+            team_ids_from_series.add(row["team_home_id"])
+        if row.get("team_away_id"):
+            team_ids_from_series.add(row["team_away_id"])
+
+    if not team_ids_from_series:
+        return TeamStandingsOut(competition_name=competition_name, entries=[])
+
     teams_resp = (
         supabase.table("teams")
         .select("id, name, logo_url")
-        .eq("competition_id", competition_id)
+        .in_("id", list(team_ids_from_series))
         .execute()
     )
     teams = teams_resp.data or []
