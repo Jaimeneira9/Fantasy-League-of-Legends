@@ -1482,7 +1482,7 @@ function ScoutRow({ player: p, animationDelay, onOpen }: { player: ScoutPlayer; 
         {/* Nombre + equipo + badges */}
         <div className="min-w-0 flex-1 overflow-hidden">
           {/* Fila 1: nombre + badges */}
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <div className="flex items-center gap-1 min-w-0 overflow-hidden">
             <span
               className="truncate"
               style={{
@@ -1556,14 +1556,21 @@ function ScoutRow({ player: p, animationDelay, onOpen }: { player: ScoutPlayer; 
           </div>
           {/* Fila 2: equipo */}
           <div className="flex items-center gap-1.5 mt-1 min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getTeamBadgeUrl(p.team)}
-              alt={p.team}
-              className="flex-shrink-0"
-              style={{ width: 14, height: 14, objectFit: "contain" }}
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
-            />
+            <div className="flex-shrink-0 flex items-center justify-center" style={{ width: 14, height: 14 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getTeamBadgeUrl(p.team)}
+                alt={p.team}
+                style={{ width: 14, height: 14, objectFit: "contain" }}
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  (e.currentTarget.nextSibling as HTMLElement)?.style.setProperty("display", "flex");
+                }}
+              />
+              <span style={{ display: "none", fontSize: "8px", color: "#C8A84B", fontWeight: 700 }}>
+                {p.team.substring(0, 2).toUpperCase()}
+              </span>
+            </div>
             <span
               className="truncate hidden sm:inline"
               style={{
@@ -1576,7 +1583,7 @@ function ScoutRow({ player: p, animationDelay, onOpen }: { player: ScoutPlayer; 
             </span>
             <span className="flex-shrink-0" style={{ color: "#2A2A2A", fontSize: "11px" }}>·</span>
             <span
-              className="flex-shrink-0"
+              className="flex-shrink-0 whitespace-nowrap"
               style={{
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontSize: "12px",
