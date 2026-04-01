@@ -90,7 +90,7 @@ export function LeagueRow({ league }: { league: League }) {
                 {league.member.remaining_budget.toFixed(1)}M
               </p>
               <p className="text-xs mt-0.5 font-mono" style={{ color: "var(--text-secondary)" }}>
-                {league.member.total_points.toFixed(0)} pts
+                {Math.round(league.member.total_points)} pts
               </p>
             </div>
           )}

@@ -1259,14 +1259,14 @@ export default function PlayerStatsPage() {
               color: "#FCD400",
               lineHeight: 1,
             }}>
-              {totalPoints.toFixed(0)}
+              {Math.round(totalPoints)}
             </div>
             <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>
               pts total
             </div>
             {lastMatchPts > 0 && (
               <div style={{ fontSize: 12, color: "#4CAF50", marginTop: 4, fontWeight: 600 }}>
-                +{lastMatchPts.toFixed(1)} esta semana
+                +{Math.round(lastMatchPts)} esta semana
               </div>
             )}
           </div>
@@ -1398,7 +1398,7 @@ export default function PlayerStatsPage() {
                   />
                 )}
                 <span style={{ fontSize: 12, color: "#FCD400", fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  +{activeStat.fantasy_points.toFixed(1)} pts
+                  +{Math.round(activeStat.fantasy_points)} pts
                 </span>
               </div>
             )}
@@ -1455,7 +1455,7 @@ export default function PlayerStatsPage() {
                       color: pts >= 0 ? "#4ade80" : "#f87171",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}>
-                      {pts >= 0 ? `+${pts.toFixed(1)}` : pts.toFixed(1)} pts
+                      {pts >= 0 ? `+${Math.round(pts)}` : Math.round(pts)} pts
                     </div>
                   );
                 })()}
@@ -1556,7 +1556,7 @@ export default function PlayerStatsPage() {
                           fontFamily: "'Barlow Condensed', sans-serif",
                           fontWeight: 700,
                         }}>
-                          {stat.fantasy_points.toFixed(0)}
+                          {Math.round(stat.fantasy_points)}
                         </span>
                         <div className="bar-item" style={{
                           width: "100%",
@@ -1711,7 +1711,7 @@ export default function PlayerStatsPage() {
                           color: isWin ? "#FCD400" : "#555",
                           flexShrink: 0,
                         }}>
-                          +{stat.fantasy_points.toFixed(1)}
+                          +{Math.round(stat.fantasy_points)}
                         </div>
 
                         {/* Expand chevron */}
@@ -1825,7 +1825,7 @@ export default function PlayerStatsPage() {
                                       fontWeight: 700,
                                       color: gWin ? "#FCD400" : "#555",
                                     }}>
-                                      {g.game_points.toFixed(1)}
+                                      {Math.round(g.game_points)}
                                     </span>
                                   </div>
                                 );

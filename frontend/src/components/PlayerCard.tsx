@@ -155,7 +155,7 @@ export function PlayerCard({ player, matchStats = [], totalPoints, showPrice = t
                 className="text-[10px] font-bold"
                 style={{ color: totalPoints > 0 ? "var(--color-primary-light)" : "rgba(255,255,255,0.5)" }}
               >
-                ● {totalPoints.toFixed(1)} pts
+                ● {Math.round(totalPoints)} pts
               </span>
             )}
           </div>
@@ -183,7 +183,7 @@ export function PlayerCard({ player, matchStats = [], totalPoints, showPrice = t
                   className="font-black text-2xl"
                   style={{ color: totalPoints > 0 ? "var(--color-primary-light)" : "rgba(255,255,255,0.7)" }}
                 >
-                  {totalPoints.toFixed(1)}
+                  {Math.round(totalPoints)}
                 </span>
                 <span className="text-white/30 text-xs">pts</span>
               </div>
@@ -278,7 +278,7 @@ export function PlayerCard({ player, matchStats = [], totalPoints, showPrice = t
                     <span className="text-white/40 text-[10px] uppercase tracking-widest font-semibold">Puntos jornada</span>
                     <div className="flex items-baseline gap-1">
                       <span className="font-black text-lg" style={{ color: "var(--color-primary-light)" }}>
-                        {selectedStat.match_points.toFixed(1)}
+                        {Math.round(selectedStat.match_points)}
                       </span>
                       <span className="text-white/30 text-[10px]">pts</span>
                     </div>

@@ -126,7 +126,7 @@ function TeamModal({ leagueId, memberId, memberName, onClose }: {
                     fontWeight: 700,
                     color: "#fcd400",
                   }}>
-                    {data.member.total_points.toFixed(1)}
+                    {Math.round(data.member.total_points)}
                   </span>
                   {" "}
                   <span style={{ color: "#555" }}>pts</span>
@@ -260,7 +260,7 @@ function TeamModal({ leagueId, memberId, memberName, onClose }: {
                         minWidth: 48,
                         textAlign: "right",
                       }}>
-                        {(rp.split_points ?? 0).toFixed(1)}
+                        {Math.round(rp.split_points ?? 0)}
                       </p>
                     </div>
                   );
@@ -540,14 +540,14 @@ function StandingRow({
       {/* PTS ESTA SEM. — 90px */}
       <div style={{ width: 90, flexShrink: 0, textAlign: "right" }}>
         {weekPoints !== null
-          ? <span style={weekPtsStyle}>{weekPoints.toFixed(1)}</span>
+          ? <span style={weekPtsStyle}>{Math.round(weekPoints)}</span>
           : <span style={{ fontSize: 13, fontWeight: 600, color: "#555555" }}>—</span>
         }
       </div>
 
       {/* TOTAL — 80px */}
       <div style={{ width: 80, flexShrink: 0, textAlign: "right" }}>
-        <span style={totalPtsStyle}>{entry.total_points.toFixed(1)}</span>
+        <span style={totalPtsStyle}>{Math.round(entry.total_points)}</span>
       </div>
     </button>
   );
