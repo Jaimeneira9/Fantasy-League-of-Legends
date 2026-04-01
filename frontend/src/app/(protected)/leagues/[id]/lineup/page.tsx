@@ -360,7 +360,7 @@ function PlayerCardFilled({
             {/* Row 3: price + pts */}
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
               <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "16px", fontWeight: 700, color: "#FCD400", letterSpacing: "-0.02em", lineHeight: 1 }}>
-                {rp.split_points != null ? rp.split_points.toFixed(1) : "—"}
+                {rp.split_points != null ? Math.round(rp.split_points) : "—"}
               </span>
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px", color: "#888888" }}>pts</span>
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "11px", color: "#777777", marginLeft: "auto" }}>
@@ -618,7 +618,7 @@ function PlayerCardFilled({
               lineHeight: 1,
             }}
           >
-            {rp.split_points != null ? rp.split_points.toFixed(1) : "—"}
+            {rp.split_points != null ? Math.round(rp.split_points) : "—"}
           </span>
           <span
             style={{

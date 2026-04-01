@@ -505,7 +505,7 @@ function PlayerCard({
                 lineHeight: 1,
               }}
             >
-              {p.split_points != null ? p.split_points.toFixed(1) : "—"}
+              {p.split_points != null ? Math.round(p.split_points) : "—"}
             </span>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px", color: "#888888" }}>pts</span>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "11px", color: "#777777", marginLeft: "auto", display: "flex", alignItems: "baseline", gap: "3px" }}>
@@ -706,7 +706,7 @@ function PlayerCard({
               lineHeight: 1,
             }}
           >
-            {p.split_points != null ? p.split_points.toFixed(1) : "—"}
+            {p.split_points != null ? Math.round(p.split_points) : "—"}
           </span>
           <span
             style={{
