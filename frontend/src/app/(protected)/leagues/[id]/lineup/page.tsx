@@ -426,8 +426,8 @@ function PlayerCardFilled({
           confirmLabel={clauseActive ? "Subir cláusula" : "Asignar cláusula"}
           previewText={(amount) =>
             clauseActive
-              ? `Pagás ${amount.toFixed(1)}M · Cláusula sube ${(amount * 0.5).toFixed(1)}M`
-              : `Pagás ${amount.toFixed(1)}M · Cláusula de ${(amount * 0.5).toFixed(1)}M`
+              ? `Pagas ${amount.toFixed(1)}M · Cláusula sube ${(amount * 0.5).toFixed(1)}M`
+              : `Pagas ${amount.toFixed(1)}M · Cláusula de ${(amount * 0.5).toFixed(1)}M`
           }
           onConfirm={handleUpgrade}
           isLoading={popupLoading}

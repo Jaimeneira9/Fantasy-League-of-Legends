@@ -75,7 +75,7 @@ export default function ResetPasswordPage() {
           Nueva contraseña
         </h1>
         <p className="text-sm" style={{ color: "#555555" }}>
-          Elegí una contraseña nueva para tu cuenta.
+          Elige una contraseña nueva para tu cuenta.
         </p>
       </div>
 
@@ -147,7 +147,7 @@ export default function ResetPasswordPage() {
                   htmlFor="confirmPassword"
                   style={{ color: "#888888", fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  Confirmá la contraseña
+                  Confirma la contraseña
                 </label>
                 <input
                   id="confirmPassword"
@@ -167,7 +167,7 @@ export default function ResetPasswordPage() {
                   }}
                   onFocus={(e) => (e.currentTarget.style.borderColor = "#FCD400")}
                   onBlur={(e) => (e.currentTarget.style.borderColor = "#2A2A2A")}
-                  placeholder="Repetí tu contraseña"
+                  placeholder="Repite tu contraseña"
                 />
               </div>
 
