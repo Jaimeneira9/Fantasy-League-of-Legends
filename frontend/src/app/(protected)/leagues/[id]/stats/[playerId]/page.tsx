@@ -974,17 +974,12 @@ export default function PlayerStatsPage() {
         const availableSplits = splitList as Split[];
         setSplits(availableSplits);
 
-        // Seleccionar el split activo por defecto
-        const activeSplit = availableSplits.find(s => s.is_active);
-        const defaultSplitId = activeSplit?.id ?? availableSplits[0]?.id ?? null;
-        setSelectedSplitId(defaultSplitId);
+        // Por defecto mostrar todos los splits (sin filtro)
+        setSelectedSplitId(null);
 
-        // Default to last week del split seleccionado
-        const filteredStats = defaultSplitId
-          ? h.stats.filter(s => s.competition_id === defaultSplitId)
-          : h.stats;
-        if (filteredStats.length > 0) {
-          setSelectedWeek(filteredStats.length);
+        // Default to last week de todas las series
+        if (h.stats.length > 0) {
+          setSelectedWeek(h.stats.length);
         }
       })
       .catch((e: Error) => { if (!cancelled) setError(e.message); })
@@ -1502,6 +1497,29 @@ export default function PlayerStatsPage() {
                   alt="LEC"
                   style={{ width: 24, height: 24, borderRadius: 4, objectFit: "contain", flexShrink: 0 }}
                 />
+                {/* Chip "Todos" — sin filtro de split */}
+                <button
+                  onClick={() => {
+                    setSelectedSplitId(null);
+                    const allStats = historyData?.stats ?? [];
+                    setSelectedWeek(allStats.length > 0 ? allStats.length : null);
+                  }}
+                  style={{
+                    background: selectedSplitId === null ? "#FCD400" : "#1A1A1A",
+                    border: `1px solid ${selectedSplitId === null ? "#FCD400" : "#2A2A2A"}`,
+                    borderRadius: 8,
+                    padding: "6px 14px",
+                    color: selectedSplitId === null ? "#000" : "#777",
+                    fontSize: 12,
+                    fontWeight: selectedSplitId === null ? 700 : 500,
+                    cursor: "pointer",
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    letterSpacing: "0.04em",
+                    flexShrink: 0,
+                  }}
+                >
+                  Todos
+                </button>
                 {splits.map((split) => {
                   const isActive = split.id === selectedSplitId;
                   return (
