@@ -39,13 +39,13 @@ export default function ConfirmEmailPage() {
           className="font-black text-3xl uppercase tracking-tight mb-3"
           style={{ color: "#F0E8D0", fontFamily: "'Space Grotesk', sans-serif" }}
         >
-          Revisá tu email
+          Revisa tu email
         </h1>
         <p className="text-sm leading-relaxed mb-4" style={{ color: "#888888" }}>
-          Te enviamos un link de confirmación. Hacé click en el link para activar tu cuenta.
+          Te enviamos un link de confirmación. Haz clic en el link para activar tu cuenta.
         </p>
         <p className="text-xs" style={{ color: "#555555" }}>
-          ¿No llegó? Revisá la carpeta de spam.
+          ¿No llegó? Revisa la carpeta de spam.
         </p>
       </div>
 

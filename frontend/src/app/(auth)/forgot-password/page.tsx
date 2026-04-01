@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
           Recuperar contraseña
         </h1>
         <p className="text-sm" style={{ color: "#555555" }}>
-          Ingresá tu email y te enviamos un link para resetear tu contraseña.
+          Ingresa tu email y te enviamos un link para resetear tu contraseña.
         </p>
       </div>
 

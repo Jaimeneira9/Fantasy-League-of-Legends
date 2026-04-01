@@ -332,7 +332,7 @@ function SellPanel({
             </span>
           </div>
           <p style={descStyle}>
-            Recibirás ofertas de la liga y otros managers. Aceptás vos.
+            Recibirás ofertas de la liga y otros managers. Tú decides si aceptar.
           </p>
           <button
             onClick={handleCancel}
