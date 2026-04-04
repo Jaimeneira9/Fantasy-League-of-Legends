@@ -23,6 +23,9 @@ export interface ActionPopupProps {
   /** Monto mínimo para mode="input" */
   minAmount?: number;
 
+  /** Monto máximo permitido para mode="input" (ej: presupuesto disponible) */
+  maxAmount?: number;
+
   /** Texto del botón de confirmación */
   confirmLabel?: string;
 
@@ -52,6 +55,7 @@ export function ActionPopup({
   playerImage,
   mode,
   minAmount = 0,
+  maxAmount,
   confirmLabel = "Confirmar",
   previewText,
   confirmMessage,
@@ -80,7 +84,11 @@ export function ActionPopup({
   if (!mounted || !isOpen) return null;
 
   const parsedAmount = parseFloat(amount);
-  const isValidAmount = !isNaN(parsedAmount) && parsedAmount >= minAmount && parsedAmount > 0;
+  const isValidAmount =
+    !isNaN(parsedAmount) &&
+    parsedAmount >= minAmount &&
+    parsedAmount > 0 &&
+    (maxAmount === undefined || parsedAmount <= maxAmount);
 
   const handleConfirm = async () => {
     if (mode === "input") {

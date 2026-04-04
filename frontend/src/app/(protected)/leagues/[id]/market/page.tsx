@@ -64,9 +64,20 @@ export default function MarketPage() {
   const tabFromUrl = searchParams.get("tab");
   const tab: Tab = (tabFromUrl ? URL_TAB_MAP[tabFromUrl] : null) ?? "mercado";
 
-  const [budget, setBudget]         = useState<number | null>(null);
-  const [league, setLeague]         = useState<League | null>(null);
-  const [split, setSplit]           = useState<Split | null>(null);
+  const [budget, setBudget]               = useState<number | null>(null);
+  const [retainedBudget, setRetainedBudget] = useState(0);
+  const [league, setLeague]               = useState<League | null>(null);
+  const [split, setSplit]                 = useState<Split | null>(null);
+
+  const refreshRetained = useCallback(() => {
+    api.bids.myBids(leagueId)
+      .then((bids) => {
+        const active = bids.filter((b) => b.status === "active");
+        const sum = active.reduce((acc, b) => acc + b.bid_amount, 0);
+        setRetainedBudget(sum);
+      })
+      .catch(() => {});
+  }, [leagueId]);
 
   useEffect(() => {
     api.leagues.get(leagueId).then((l) => {
@@ -74,7 +85,8 @@ export default function MarketPage() {
       if (l.member) setBudget(l.member.remaining_budget);
     }).catch(() => {});
     api.splits.active().then(setSplit).catch(() => {});
-  }, [leagueId]);
+    refreshRetained();
+  }, [leagueId, refreshRetained]);
 
   const refreshBudget = useCallback(() => {
     api.leagues.get(leagueId)
@@ -83,7 +95,8 @@ export default function MarketPage() {
         if (l.member) setBudget(l.member.remaining_budget);
       })
       .catch(() => {});
-  }, [leagueId]);
+    refreshRetained();
+  }, [leagueId, refreshRetained]);
 
   return (
     <div className="min-h-[100dvh] overflow-x-hidden" style={{ background: "#0A0A0A", color: "#F0E8D0" }}>
@@ -144,7 +157,7 @@ export default function MarketPage() {
                     marginBottom: "2px",
                   }}
                 >
-                  Presupuesto
+                  Disponible
                 </p>
                 <p
                   style={{
@@ -154,8 +167,33 @@ export default function MarketPage() {
                     color: "#FCD400",
                   }}
                 >
-                  {budget.toFixed(1)}M
+                  {(budget - retainedBudget).toFixed(1)}M
                 </p>
+                {retainedBudget > 0 && (
+                  <>
+                    <p
+                      style={{
+                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontSize: "11px",
+                        color: "#555555",
+                        marginTop: "6px",
+                        marginBottom: "2px",
+                      }}
+                    >
+                      En pujas
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        color: "#E8834A",
+                      }}
+                    >
+                      {retainedBudget.toFixed(1)}M
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -165,7 +203,7 @@ export default function MarketPage() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-24">
-        {tab === "mercado"   && <MarketTab  leagueId={leagueId} budget={budget} splitName={split?.name} onBid={refreshBudget} isMobile={isMobile} />}
+        {tab === "mercado"   && <MarketTab  leagueId={leagueId} budget={budget} availableBudget={budget !== null ? budget - retainedBudget : null} splitName={split?.name} onBid={refreshBudget} isMobile={isMobile} />}
         {tab === "mis-pujas" && <MyBidsTab  leagueId={leagueId} />}
         {tab === "ofertas"   && <OffersTab  leagueId={leagueId} />}
         {tab === "explorar"  && <ScoutTab   leagueId={leagueId} />}
@@ -181,12 +219,14 @@ export default function MarketPage() {
 function MarketTab({
   leagueId,
   budget,
+  availableBudget,
   splitName,
   onBid,
   isMobile,
 }: {
   leagueId: string;
   budget: number | null;
+  availableBudget: number | null;
   splitName?: string;
   onBid: () => void;
   isMobile?: boolean;
@@ -327,6 +367,7 @@ function MarketTab({
           playerImage={popupListing.players.image_url ?? undefined}
           mode="input"
           minAmount={popupListing.players.current_price}
+          maxAmount={availableBudget ?? undefined}
           confirmLabel="Pujar"
           previewText={(amount) => `Puja de ${amount.toFixed(1)}M`}
           onConfirm={async (amount) => {
@@ -532,6 +573,21 @@ function PlayerCard({
             >
               {listing.bid_count} {listing.bid_count === 1 ? "puja" : "pujas"}
             </span>
+          )}
+
+          {/* Countdown */}
+          {listing.closes_at && !closed && countdown && (
+            <p
+              className="font-mono"
+              style={{ fontSize: "10px", color: "#888888", margin: 0 }}
+            >
+              ⏱ {countdown}
+            </p>
+          )}
+          {closed && (
+            <p style={{ fontSize: "10px", color: "#C62828", margin: 0 }}>
+              Cerrado
+            </p>
           )}
 
           {/* Row 5: action button */}

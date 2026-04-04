@@ -85,8 +85,21 @@ async def place_bid(
             detail=f"La puja mínima es {player_price}M",
         )
 
-    if float(member["remaining_budget"]) < body.bid_amount:
-        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Presupuesto insuficiente")
+    active_bids_resp = (
+        supabase.table("market_bids")
+        .select("bid_amount")
+        .eq("member_id", member["id"])
+        .eq("status", "active")
+        .neq("listing_id", str(listing_id))
+        .execute()
+    )
+    active_bids_sum = sum(float(b["bid_amount"]) for b in (active_bids_resp.data or []))
+    available = float(member["remaining_budget"]) - active_bids_sum
+    if body.bid_amount > available:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Presupuesto insuficiente — tenés {available:.1f}M disponibles ({active_bids_sum:.1f}M retenidos en pujas activas)",
+        )
 
     existing_resp = (
         supabase.table("market_bids")
