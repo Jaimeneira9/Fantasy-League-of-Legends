@@ -567,6 +567,33 @@ def get_detailed_leaderboard(
             if week is not None:
                 acc["week_set"].add(week)
 
+    # 6b. Batch query: player_series_stats for all starters, to compute weeks_scored per member.
+    # weeks_scored = weeks where sum of starters' series_points > 0.
+    # { member_id: { week: sum_series_points } }
+    member_week_pts: dict[str, dict[int, float]] = {mid: {} for mid in member_ids}
+
+    if all_starter_ids and active_competition_id:
+        pss_resp = (
+            supabase.table("player_series_stats")
+            .select("player_id, series_points, series(competition_id, week)")
+            .in_("player_id", all_starter_ids)
+            .execute()
+        )
+        for row in (pss_resp.data or []):
+            series_data = row.get("series") or {}
+            if str(series_data.get("competition_id") or "") != str(active_competition_id):
+                continue
+            week = series_data.get("week")
+            if week is None:
+                continue
+            pid = row["player_id"]
+            mid = player_to_member.get(pid)
+            if not mid:
+                continue
+            pts = float(row.get("series_points") or 0)
+            week_map = member_week_pts[mid]
+            week_map[week] = week_map.get(week, 0.0) + pts
+
     # 7. Aggregate per member and build response
     def _safe_avg(values: list[float]) -> float | None:
         return round(sum(values) / len(values), 3) if values else None
@@ -581,7 +608,6 @@ def get_detailed_leaderboard(
         avg_assists = _safe_avg(acc["assists"])
         avg_gold_diff_15 = _safe_avg(acc["gold_diff_15"])
         games_counted = len(acc["kills"])
-        week_count = max(len(acc["week_set"]), 1)
 
         # avg_kda = (avg_kills + avg_assists) / max(avg_deaths, 1)
         if avg_kills is not None and avg_assists is not None:
@@ -590,10 +616,13 @@ def get_detailed_leaderboard(
         else:
             avg_kda = None
 
-        # avg_pts_per_week = total_points_from_starters / weeks_played
-        total_pts_starters = sum(acc["game_points"])
+        # avg_pts_per_week = member.total_points / weeks_scored
+        # weeks_scored = weeks where sum of starters' series_points > 0
+        week_map = member_week_pts[mid]
+        weeks_scored = sum(1 for pts in week_map.values() if pts > 0)
+        total_points = float(m["total_points"] or 0)
         avg_pts_per_week: float | None = (
-            round(total_pts_starters / week_count, 2) if acc["game_points"] else None
+            round(total_points / weeks_scored, 2) if weeks_scored > 0 else None
         )
 
         profile = profiles_map.get(m.get("user_id", ""), {})

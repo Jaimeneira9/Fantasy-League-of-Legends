@@ -320,6 +320,7 @@ function SortableHeader({
     gap: 3,
     cursor: "pointer",
     userSelect: "none",
+    width: "100%",
   };
 
   return (
