@@ -705,6 +705,89 @@ async def _process_series(
 
 
 # ---------------------------------------------------------------------------
+# Lineup snapshot (idempotente — se toma una vez por semana)
+# ---------------------------------------------------------------------------
+
+
+def _take_lineup_snapshot_if_needed(
+    supabase: Client,
+    week: int,
+    competition_id: str,
+) -> None:
+    """Take a one-time snapshot of all managers' starter slots for this week.
+    Idempotent: exits immediately if snapshot already exists for (competition_id, week).
+    """
+    # Check if snapshot already exists
+    existing = (
+        supabase.table("lineup_snapshots")
+        .select("id")
+        .eq("competition_id", competition_id)
+        .eq("week", week)
+        .limit(1)
+        .execute()
+    )
+    if existing.data:
+        logger.info("Lineup snapshot already exists for week=%d — skipping", week)
+        return
+
+    # Fetch all leagues for this competition (via fantasy_leagues; filter by competition text or
+    # just take all active league_members since fantasy_leagues has no competition_id FK)
+    # Strategy: snapshot ALL league_members regardless of competition — they all share the
+    # same active competition, so competition_id scoping is handled at query time.
+    members_resp = (
+        supabase.table("league_members")
+        .select("id, league_id")
+        .execute()
+    )
+
+    STARTER_SLOTS = ["starter_1", "starter_2", "starter_3", "starter_4", "starter_5"]
+    rows = []
+
+    for member in (members_resp.data or []):
+        member_id = member["id"]
+        league_id = member["league_id"]
+
+        # Get roster_id
+        roster_resp = (
+            supabase.table("rosters")
+            .select("id")
+            .eq("member_id", member_id)
+            .single()
+            .execute()
+        )
+        if not roster_resp.data:
+            continue
+        roster_id = roster_resp.data["id"]
+
+        # Get current starter slots
+        rp_resp = (
+            supabase.table("roster_players")
+            .select("slot, player_id")
+            .eq("roster_id", roster_id)
+            .in_("slot", STARTER_SLOTS)
+            .execute()
+        )
+        filled = {row["slot"]: row["player_id"] for row in (rp_resp.data or [])}
+
+        # Create one row per slot (NULL for empty)
+        for slot in STARTER_SLOTS:
+            rows.append({
+                "league_id": league_id,
+                "member_id": member_id,
+                "competition_id": competition_id,
+                "week": week,
+                "slot": slot,
+                "player_id": filled.get(slot),
+            })
+
+    if rows:
+        supabase.table("lineup_snapshots").upsert(
+            rows, on_conflict="league_id,member_id,week,slot"
+        ).execute()
+        logger.info("Lineup snapshot taken: week=%d, %d rows written", week, len(rows))
+
+
+# ---------------------------------------------------------------------------
 # Scoring de managers post-serie
 # ---------------------------------------------------------------------------
 
@@ -712,14 +795,20 @@ async def _process_series(
 def _update_manager_total_points(
     supabase: Client,
     series_ids: list[str],
+    week: int | None = None,
+    competition_id: str | None = None,
 ) -> None:
     """
     Actualiza total_points en league_members sumando los series_points de sus
     jugadores titulares para las series recién procesadas.
 
     Regla: si el manager tiene menos de 5 titulares (starter_1..starter_5)
-    en su roster, NO se suman puntos esa jornada. Los player_series_stats
-    se guardan igual — solo se omite la acumulación al manager.
+    en su roster (o en el snapshot), NO se suman puntos esa jornada.
+    Los player_series_stats se guardan igual — solo se omite la acumulación.
+
+    Si week y competition_id están presentes, lee los titulares desde
+    lineup_snapshots en lugar de roster_players (scoring histórico correcto).
+    Si no hay snapshot para esa semana, cae al roster actual con WARNING.
     """
     if not series_ids:
         return
@@ -737,46 +826,96 @@ def _update_manager_total_points(
         logger.error("Failed to fetch league_members for scoring: %s", exc)
         return
 
+    # 2. Pre-fetch snapshot rows for this week if available (bulk, avoid N+1)
+    snapshot_by_member: dict[str, dict[str, str | None]] = {}
+    if week is not None and competition_id is not None:
+        try:
+            snap_resp = (
+                supabase.table("lineup_snapshots")
+                .select("member_id, slot, player_id")
+                .eq("competition_id", competition_id)
+                .eq("week", week)
+                .execute()
+            )
+            for row in (snap_resp.data or []):
+                mid = row["member_id"]
+                if mid not in snapshot_by_member:
+                    snapshot_by_member[mid] = {}
+                snapshot_by_member[mid][row["slot"]] = row["player_id"]
+        except Exception as exc:
+            logger.warning(
+                "Failed to fetch lineup_snapshots for week=%s — will fall back to current roster: %s",
+                week, exc,
+            )
+
     for member in (members_resp.data or []):
         member_id: str = member["id"]
         current_total: float = float(member.get("total_points") or 0)
 
         try:
-            # 2. Obtener roster del manager
-            roster_resp = (
-                supabase.table("rosters")
-                .select("id")
-                .eq("member_id", member_id)
-                .limit(1)
-                .execute()
-            )
-            if not roster_resp.data:
-                continue
-            roster_id: str = roster_resp.data[0]["id"]
+            # Determine starter player_ids: prefer snapshot, fall back to current roster
+            snap_slots = snapshot_by_member.get(member_id)
 
-            # 3. Verificar que tenga exactamente 5 titulares
-            roster_resp2 = (
-                supabase.table("roster_players")
-                .select("slot, player_id")
-                .eq("roster_id", roster_id)
-                .execute()
-            )
-            roster_rows = roster_resp2.data or []
-            filled_starters = {r["slot"] for r in roster_rows} & starter_slots
-            if len(filled_starters) < 5:
-                logger.info(
-                    "[SCORING SKIP] member %s has %d/5 starters — no points added for this series",
-                    member_id,
-                    len(filled_starters),
+            if snap_slots is not None:
+                # Use snapshot
+                filled_starters = {slot for slot in snap_slots if slot in starter_slots}
+                if len(filled_starters) < 5:
+                    logger.info(
+                        "[SCORING SKIP] member %s snapshot has %d/5 starters — no points added for week=%s",
+                        member_id,
+                        len(filled_starters),
+                        week,
+                    )
+                    continue
+                starter_player_ids = [
+                    snap_slots[slot]
+                    for slot in starter_slots
+                    if snap_slots.get(slot)
+                ]
+            else:
+                # Fall back to current roster_players
+                if week is not None:
+                    logger.warning(
+                        "[SCORING FALLBACK] No snapshot for member %s week=%s — using current roster",
+                        member_id,
+                        week,
+                    )
+
+                # 2b. Obtener roster del manager
+                roster_resp = (
+                    supabase.table("rosters")
+                    .select("id")
+                    .eq("member_id", member_id)
+                    .limit(1)
+                    .execute()
                 )
-                continue
+                if not roster_resp.data:
+                    continue
+                roster_id: str = roster_resp.data[0]["id"]
 
-            # 4. Reunir player_ids de los titulares
-            starter_player_ids = [
-                r["player_id"]
-                for r in roster_rows
-                if r["slot"] in starter_slots and r.get("player_id")
-            ]
+                # 3b. Verificar que tenga exactamente 5 titulares
+                roster_resp2 = (
+                    supabase.table("roster_players")
+                    .select("slot, player_id")
+                    .eq("roster_id", roster_id)
+                    .execute()
+                )
+                roster_rows = roster_resp2.data or []
+                filled_starters = {r["slot"] for r in roster_rows} & starter_slots
+                if len(filled_starters) < 5:
+                    logger.info(
+                        "[SCORING SKIP] member %s has %d/5 starters — no points added for this series",
+                        member_id,
+                        len(filled_starters),
+                    )
+                    continue
+
+                starter_player_ids = [
+                    r["player_id"]
+                    for r in roster_rows
+                    if r["slot"] in starter_slots and r.get("player_id")
+                ]
+
             if not starter_player_ids:
                 continue
 
@@ -992,10 +1131,27 @@ async def run_series_ingest(supabase: Client) -> None:
     else:
         logger.info("No new game stats inserted — price update skipped")
 
-    # 6. Actualizar total_points de managers para las series procesadas
+    # 6a. Snapshot de alineaciones para esta semana (idempotente, corre una vez por semana)
+    snap_week: int | None = None
+    if processed_series_ids and processed_weeks:
+        snap_week = max(set(processed_weeks), key=processed_weeks.count)
+        try:
+            _take_lineup_snapshot_if_needed(supabase, snap_week, competition_id)
+        except Exception as exc:
+            logger.error(
+                "Lineup snapshot failed (non-blocking): %s", exc, exc_info=True
+            )
+            snap_week = None
+
+    # 6b. Actualizar total_points de managers para las series procesadas
     if processed_series_ids:
         try:
-            _update_manager_total_points(supabase, processed_series_ids)
+            _update_manager_total_points(
+                supabase,
+                processed_series_ids,
+                week=snap_week,
+                competition_id=competition_id,
+            )
         except Exception as exc:
             logger.error(
                 "Manager scoring failed after series ingest (non-blocking): %s",

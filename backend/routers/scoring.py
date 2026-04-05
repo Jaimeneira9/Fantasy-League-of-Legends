@@ -169,8 +169,32 @@ async def get_leaderboard(
         series_ids_for_week = [s["id"] for s in (series_week_resp.data or [])]
 
         if series_ids_for_week:
-            # Fetch player_series_stats para todos los starters de todas las semanas
-            all_starter_ids = list({pid for pids in member_starter_player_ids.values() for pid in pids})
+            # Intentar reconstruir member_starter_player_ids desde lineup_snapshots
+            snap_resp = (
+                supabase.table("lineup_snapshots")
+                .select("member_id, slot, player_id")
+                .eq("competition_id", active_competition_id)
+                .eq("week", week)
+                .in_("member_id", member_ids)
+                .execute()
+            )
+            if snap_resp.data:
+                # Rebuild from snapshot
+                from collections import defaultdict as _defaultdict
+                snapped: dict[str, list[str]] = _defaultdict(list)
+                for row in snap_resp.data:
+                    if row["player_id"] and not (row.get("slot") or "").startswith("bench"):
+                        snapped[row["member_id"]].append(row["player_id"])
+                # Replace member_starter_player_ids with snapshot data for this week
+                week_starter_player_ids: dict[str, list[str]] = {
+                    mid: snapped.get(mid, []) for mid in member_ids
+                }
+            else:
+                # No snapshot: fall back to current roster (backwards compat)
+                week_starter_player_ids = member_starter_player_ids
+
+            # Fetch player_series_stats para todos los starters de esta semana
+            all_starter_ids = list({pid for pids in week_starter_player_ids.values() for pid in pids})
             if all_starter_ids:
                 pss_resp = (
                     supabase.table("player_series_stats")
@@ -187,7 +211,7 @@ async def get_leaderboard(
                     player_week_points[pid] = player_week_points.get(pid, 0.0) + pts
 
                 for mid in member_ids:
-                    starters = member_starter_player_ids[mid]
+                    starters = week_starter_player_ids[mid]
                     if len(starters) < 5:
                         week_points_map[mid] = 0.0
                     else:

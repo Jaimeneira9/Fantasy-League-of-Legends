@@ -329,10 +329,15 @@ async def update_my_nick(
 async def get_member_roster(
     league_id: UUID,
     member_id: UUID,
+    week: int | None = None,
     supabase: Client = Depends(get_supabase),
     user: dict = Depends(get_current_user),
 ) -> dict:
-    """Devuelve el roster público de otro miembro de la liga."""
+    """Devuelve el roster público de otro miembro de la liga.
+
+    Si se pasa ?week=N, intenta servir el equipo snapshotted de esa jornada.
+    Si no hay snapshot para esa semana, cae al roster actual.
+    """
     _assert_member(supabase, str(league_id), user["id"])
 
     member_resp = (
@@ -346,51 +351,86 @@ async def get_member_roster(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Miembro no encontrado")
     member = member_resp.data[0]
 
-    roster_resp = (
-        supabase.table("rosters")
+    # Obtener competition activa (necesaria para snapshot y split_points)
+    active_comp = (
+        supabase.table("competitions")
         .select("id")
-        .eq("member_id", str(member_id))
+        .eq("is_active", True)
+        .limit(1)
         .execute()
     )
-    if not roster_resp.data:
-        return {"member": member, "players": []}
+    active_comp_id: str | None = active_comp.data[0]["id"] if active_comp.data else None
 
-    roster_id = roster_resp.data[0]["id"]
-    players_resp = (
-        supabase.table("roster_players")
-        .select("slot, price_paid, players(id, name, team, role, image_url, current_price)")
-        .eq("roster_id", roster_id)
-        .execute()
-    )
-    roster_players = players_resp.data or []
+    # Si se pidió semana y hay competition activa, intentar servir desde snapshot
+    roster_players: list[dict] = []
+    used_snapshot = False
+
+    if week is not None and active_comp_id:
+        snap_resp = (
+            supabase.table("lineup_snapshots")
+            .select("slot, player_id")
+            .eq("member_id", str(member_id))
+            .eq("competition_id", active_comp_id)
+            .eq("week", week)
+            .execute()
+        )
+        if snap_resp.data:
+            # Fetch player details for snapshotted player_ids
+            snapped_player_ids = [r["player_id"] for r in snap_resp.data if r.get("player_id")]
+            snap_slot_map = {r["slot"]: r["player_id"] for r in snap_resp.data}
+            players_map: dict[str, dict] = {}
+            if snapped_player_ids:
+                p_resp = (
+                    supabase.table("players")
+                    .select("id, name, team, role, image_url, current_price")
+                    .in_("id", snapped_player_ids)
+                    .execute()
+                )
+                players_map = {p["id"]: p for p in (p_resp.data or [])}
+
+            for slot, player_id in snap_slot_map.items():
+                if player_id and player_id in players_map:
+                    roster_players.append({
+                        "slot": slot,
+                        "price_paid": None,
+                        "players": players_map[player_id],
+                    })
+            used_snapshot = True
+
+    if not used_snapshot:
+        roster_resp = (
+            supabase.table("rosters")
+            .select("id")
+            .eq("member_id", str(member_id))
+            .execute()
+        )
+        if not roster_resp.data:
+            return {"member": member, "players": []}
+
+        roster_id = roster_resp.data[0]["id"]
+        players_resp = (
+            supabase.table("roster_players")
+            .select("slot, price_paid, players(id, name, team, role, image_url, current_price)")
+            .eq("roster_id", roster_id)
+            .execute()
+        )
+        roster_players = players_resp.data or []
 
     # Enrich with split points from player_series_stats
     player_ids = [rp["players"]["id"] for rp in roster_players if rp.get("players")]
     points_map: dict[str, float] = {}
-    if player_ids:
-        # Obtener competition activa
-        active_comp = (
-            supabase.table("competitions")
+    if player_ids and active_comp_id:
+        # Scope series by week if provided, else full split
+        series_filter = (
+            supabase.table("series")
             .select("id")
-            .eq("is_active", True)
-            .limit(1)
-            .execute()
+            .eq("competition_id", active_comp_id)
         )
-        active_comp_id = active_comp.data[0]["id"] if active_comp.data else None
+        if week is not None:
+            series_filter = series_filter.eq("week", week)
+        series_resp2 = series_filter.execute()
+        active_series_ids = [s["id"] for s in (series_resp2.data or [])]
 
-        # Obtener series_ids de esa competición
-        if active_comp_id:
-            series_resp = (
-                supabase.table("series")
-                .select("id")
-                .eq("competition_id", active_comp_id)
-                .execute()
-            )
-            active_series_ids = [s["id"] for s in (series_resp.data or [])]
-        else:
-            active_series_ids = []
-
-        # Filtrar player_series_stats solo por el split activo
         if active_series_ids:
             stats_resp = (
                 supabase.table("player_series_stats")

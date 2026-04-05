@@ -6,7 +6,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 gsap.registerPlugin(useGSAP);
-import { api, type Roster, type RosterPlayer, type Slot, type Split } from "@/lib/api";
+import { api, type Roster, type RosterPlayer, type Slot, type Split, type LeaderboardResponse } from "@/lib/api";
 import { RoleIcon, ROLE_COLORS, ROLE_LABEL } from "@/components/RoleIcon";
 import { getTeamBadgeUrl } from "@/components/PlayerCard";
 import { getRoleColor } from "@/lib/roles";
@@ -55,6 +55,22 @@ function SplitResetWarning({ split, leagueId }: { split: Split | null; leagueId:
 }
 
 // ---------------------------------------------------------------------------
+// Snapshot banner — shown when current week has been snapshotted
+// ---------------------------------------------------------------------------
+function SnapshotBanner({ week }: { week: number }) {
+  return (
+    <div className="mx-4 sm:mx-6 mt-4 px-4 py-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+      <p className="text-blue-300 font-semibold text-sm">
+        Equipo fijado para J{week}
+      </p>
+      <p className="text-blue-400/70 text-xs mt-0.5">
+        Tu alineación de esta jornada ya fue registrada. Podés seguir operando en el mercado con libertad.
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 export default function LineupPage() {
@@ -62,6 +78,7 @@ export default function LineupPage() {
   const router = useRouter();
   const [roster, setRoster]   = useState<Roster | null>(null);
   const [split, setSplit]     = useState<Split | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -74,20 +91,32 @@ export default function LineupPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // PERF FIX: parallel fetch — roster + split in one Promise.all
+  // PERF FIX: parallel fetch — roster + split + leaderboard in one Promise.all
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([
       api.roster.get(leagueId),
       api.splits.active().catch(() => null),
+      api.scoring.leaderboard(leagueId).catch(() => null),
     ])
-      .then(([rosterData, splitData]) => {
+      .then(([rosterData, splitData, boardData]) => {
         setRoster(rosterData);
         setSplit(splitData);
+        setLeaderboard(boardData);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [leagueId]);
+
+  // Derive snapshot state: current week appears in available_weeks → snapshot taken
+  const snapshotWeek: number | null = (() => {
+    if (!leaderboard) return null;
+    const { current_week, available_weeks } = leaderboard;
+    if (current_week != null && available_weeks.includes(current_week)) {
+      return current_week;
+    }
+    return null;
+  })();
 
   useEffect(() => { load(); }, [load]);
 
@@ -107,6 +136,7 @@ export default function LineupPage() {
   return (
     <div className="min-h-[100dvh] overflow-x-hidden" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
       <SplitResetWarning split={split} leagueId={leagueId} />
+      {snapshotWeek != null && <SnapshotBanner week={snapshotWeek} />}
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:py-8">
         {error && (

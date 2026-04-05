@@ -21,10 +21,11 @@ type SortKey = "total_points" | "avg_pts_per_week";
 // ---------------------------------------------------------------------------
 // Modal: equipo de un miembro
 // ---------------------------------------------------------------------------
-function TeamModal({ leagueId, memberId, memberName, onClose }: {
+function TeamModal({ leagueId, memberId, memberName, selectedWeek, onClose }: {
   leagueId: string;
   memberId: string;
   memberName: string;
+  selectedWeek: number | null;
   onClose: () => void;
 }) {
   const [data, setData] = useState<MemberRoster | null>(null);
@@ -40,11 +41,13 @@ function TeamModal({ leagueId, memberId, memberName, onClose }: {
   }, []);
 
   useEffect(() => {
-    api.leagues.memberRoster(leagueId, memberId)
+    setLoading(true);
+    setData(null);
+    api.leagues.memberRoster(leagueId, memberId, selectedWeek)
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [leagueId, memberId]);
+  }, [leagueId, memberId, selectedWeek]);
 
   const SLOT_ORDER = ["starter_1","starter_2","starter_3","starter_4","starter_5","coach","bench_1","bench_2"];
   const starterCount = data ? data.players.filter((rp) => !rp.slot.startsWith("bench")).length : 0;
@@ -836,6 +839,7 @@ export default function StandingsPage() {
           leagueId={leagueId}
           memberId={selectedMember.id}
           memberName={selectedMember.name}
+          selectedWeek={selectedWeek}
           onClose={() => setSelectedMember(null)}
         />
       )}
