@@ -389,8 +389,8 @@ export const api = {
         body: JSON.stringify({ invite_code: inviteCode }),
       }),
     delete: (id: string) => req(`/leagues/${id}`, { method: "DELETE" }),
-    memberRoster: (leagueId: string, memberId: string) =>
-      req<MemberRoster>(`/leagues/${leagueId}/members/${memberId}/roster`),
+    memberRoster: (leagueId: string, memberId: string, week?: number | null) =>
+      req<MemberRoster>(`/leagues/${leagueId}/members/${memberId}/roster${week != null ? `?week=${week}` : ""}`),
   },
   roster: {
     get: (leagueId: string) => req<Roster>(`/roster/${leagueId}`),
