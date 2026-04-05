@@ -233,7 +233,7 @@ export default function PlayerStatsPage() {
 
   if (error || !player) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0A0A0A" }}>
+      <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0A0A0A" }}>
         <div style={{ textAlign: "center" }}>
           <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, marginBottom: 12 }}>
             {error ?? "Jugador no encontrado"}

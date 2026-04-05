@@ -53,7 +53,7 @@ export default function ActivityPage() {
   }, [leagueId]);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
+    <div className="min-h-[100dvh]" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
       <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:py-10">
         <h1
           className="text-xl sm:text-2xl font-bold mb-1"

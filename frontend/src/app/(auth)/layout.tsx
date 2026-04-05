@@ -4,7 +4,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex" style={{ background: "#0A0A0A" }}>
+    <div className="min-h-[100dvh] flex" style={{ background: "#0A0A0A" }}>
       {/* Columna izquierda — branding (solo desktop) */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"

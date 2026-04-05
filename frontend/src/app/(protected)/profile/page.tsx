@@ -18,7 +18,7 @@ export default async function ProfilePage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
+      className="min-h-[100dvh] flex items-center justify-center px-4"
       style={{ background: "var(--bg-base)" }}
     >
       <ProfileForm

@@ -1,6 +1,6 @@
 export default function DashboardLoading() {
   return (
-    <div className="min-h-screen bg-[#050508]">
+    <div className="min-h-[100dvh] bg-[#050508]">
       {/* Header skeleton */}
       <div className="border-b border-[rgba(255,255,255,0.06)] px-6 py-4 flex items-center justify-between">
         <div className="h-5 w-28 bg-[#12121c] rounded animate-pulse" />

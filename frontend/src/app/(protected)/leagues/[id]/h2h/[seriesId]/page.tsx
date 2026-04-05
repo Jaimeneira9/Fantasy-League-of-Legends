@@ -600,7 +600,7 @@ export default function H2HPage() {
   }, [seriesId]);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
+    <div className="min-h-[100dvh]" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }

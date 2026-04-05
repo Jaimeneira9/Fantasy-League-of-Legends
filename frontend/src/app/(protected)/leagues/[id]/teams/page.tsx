@@ -336,7 +336,7 @@ export default function TeamsPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
+    <div className="min-h-[100dvh]" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:py-10">
 
         {/* Page header */}
