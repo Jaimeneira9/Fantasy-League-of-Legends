@@ -30,7 +30,7 @@ export default function LeagueLayout({
   );
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-[100dvh] bg-background overflow-hidden">
       <Sidebar leagueId={params.id} />
       <main className="flex-1 overflow-y-auto">
         <div ref={contentRef}>

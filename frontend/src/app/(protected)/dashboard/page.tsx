@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     "Manager";
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
+    <div className="min-h-[100dvh]" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
 
       {/* ------------------------------------------------------------------ */}
       {/* Topbar                                                               */}

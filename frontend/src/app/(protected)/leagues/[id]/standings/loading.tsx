@@ -1,6 +1,6 @@
 export default function StandingsLoading() {
   return (
-    <div className="min-h-screen bg-[#050508] text-[#f1f5f9]">
+    <div className="min-h-[100dvh] bg-[#050508] text-[#f1f5f9]">
       {/* Header skeleton */}
       <div className="border-b border-[rgba(255,255,255,0.06)] px-4 sm:px-6 py-4 flex items-center gap-3">
         <div className="h-4 w-16 bg-[#12121c] rounded animate-pulse" />

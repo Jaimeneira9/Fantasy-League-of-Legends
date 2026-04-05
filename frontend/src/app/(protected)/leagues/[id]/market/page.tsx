@@ -1006,6 +1006,19 @@ function BidRow({ bid, leagueId, onCancel }: { bid: MyBid; leagueId: string; onC
           ✗ Perdida
         </span>
       )}
+      {bid.status === "cancelled" && (
+        <span
+          className="px-2.5 py-1 text-xs font-bold rounded-lg flex-shrink-0"
+          style={{
+            color: "#666666",
+            background: "#161616",
+            border: "1px solid #222222",
+            fontFamily: "'Space Grotesk', sans-serif",
+          }}
+        >
+          — Cancelada
+        </span>
+      )}
       {bid.status === "active" && (
         <button
           onClick={handleCancel}

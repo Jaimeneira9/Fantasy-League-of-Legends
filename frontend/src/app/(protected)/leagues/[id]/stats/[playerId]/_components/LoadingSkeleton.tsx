@@ -2,7 +2,7 @@
 
 export function LoadingSkeleton() {
   return (
-    <div style={{ minHeight: "100vh", background: "#0A0A0A" }}>
+    <div style={{ minHeight: "100dvh", background: "#0A0A0A" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px 96px" }}>
         <div style={{ height: 14, width: 120, borderRadius: 6, background: "#1A1A1A", marginBottom: 24 }} />
         <div style={{ height: 140, borderRadius: 12, background: "#111", marginBottom: 12 }} />
