@@ -297,6 +297,7 @@ export type PriceHistoryEntry = {
   date: string;
   price: number;
   delta_pct: number;
+  week?: number;
 };
 export type PriceHistoryResponse = {
   player_id: string;

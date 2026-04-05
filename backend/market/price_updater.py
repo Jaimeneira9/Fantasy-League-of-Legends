@@ -21,7 +21,7 @@ CAP_DOWN = -0.10
 PRICE_FLOOR = 1.0
 
 
-def update_player_prices_post_series(supabase: Client, player_ids: list[str]) -> None:
+def update_player_prices_post_series(supabase: Client, player_ids: list[str], week: int | None = None) -> None:
     """Llamado después de que se ingesta una jornada de series.
 
     Actualiza precios para todos los jugadores afectados. Un fallo en un
@@ -29,12 +29,12 @@ def update_player_prices_post_series(supabase: Client, player_ids: list[str]) ->
     """
     for player_id in player_ids:
         try:
-            _update_single_player_price(supabase, player_id)
+            _update_single_player_price(supabase, player_id, week=week)
         except Exception as exc:
             logger.warning("Price update failed for player %s: %s", player_id, exc)
 
 
-def _update_single_player_price(supabase: Client, player_id: str) -> None:
+def _update_single_player_price(supabase: Client, player_id: str, week: int | None = None) -> None:
     """Recalcula y persiste el precio de un jugador individual."""
     # 1. Fetch player: current_price, avg_points_baseline, price_history
     player_resp = (
@@ -101,11 +101,15 @@ def _update_single_player_price(supabase: Client, player_id: str) -> None:
 
     # 8. Append to price_history: {"date": today_iso, "price": new_price, "delta_pct": delta_pct}
     history: list = player.get("price_history") or []
-    history.append({
-        "date": datetime.now(timezone.utc).date().isoformat(),
-        "price": new_price,
+    today = datetime.now(timezone.utc).date()
+    history_entry = {
+        "date": today.isoformat(),
+        "price": round(new_price, 2),
         "delta_pct": round(delta_pct, 4),
-    })
+    }
+    if week is not None:
+        history_entry["week"] = week
+    history.append(history_entry)
 
     # 10. Trim price_history to last 90 entries
     history = history[-90:]

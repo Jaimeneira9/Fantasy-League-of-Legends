@@ -920,6 +920,7 @@ async def run_series_ingest(supabase: Client) -> None:
     processed_player_ids: set[str] = set()
     new_price_player_ids: set[str] = set()
     processed_series_ids: list[str] = []
+    processed_weeks: list[int] = []
     for (team_home_name, team_away_name, game_date), entries in series_map.items():
         # Resolver IDs de equipos
         team_home_id = _resolve_team_by_alias(supabase, team_home_name)
@@ -949,6 +950,8 @@ async def run_series_ingest(supabase: Client) -> None:
             processed_player_ids.update(series_player_ids)
             if series_id:
                 processed_series_ids.append(series_id)
+            if entries:
+                processed_weeks.append(entries[0].week)
             await asyncio.sleep(1)
         except Exception as exc:
             logger.error(
@@ -972,9 +975,14 @@ async def run_series_ingest(supabase: Client) -> None:
             "Price update will run for %d player(s) with new game stats",
             len(new_price_player_ids),
         )
+        # Determine the most common week among newly processed series
+        processed_week: int | None = None
+        if processed_weeks:
+            processed_week = max(set(processed_weeks), key=processed_weeks.count)
+            logger.info("Passing week=%d to price update", processed_week)
         try:
             from market.price_updater import update_player_prices_post_series
-            update_player_prices_post_series(supabase, list(new_price_player_ids))
+            update_player_prices_post_series(supabase, list(new_price_player_ids), week=processed_week)
         except Exception as exc:
             logger.error(
                 "Price update failed after series ingest (non-blocking): %s",
