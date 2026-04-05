@@ -142,7 +142,7 @@ def _resolve_listing(supabase: Client, listing: dict) -> None:
     }).eq("id", listing_id).execute()
 
     supabase.table("market_bids").update({"status": "won"}).eq("id", winning_bid["id"]).execute()
-    supabase.table("market_bids").update({"status": "lost"}).eq("listing_id", listing_id).neq("id", winning_bid["id"]).execute()
+    supabase.table("market_bids").update({"status": "lost"}).eq("listing_id", listing_id).eq("status", "active").neq("id", winning_bid["id"]).execute()
 
     if listing.get("candidate_id"):
         supabase.table("market_candidates").delete().eq("id", listing["candidate_id"]).execute()
