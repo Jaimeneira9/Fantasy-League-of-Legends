@@ -32,6 +32,25 @@ export function PriceHistoryChart({ entries }: Props) {
   const pct = first > 0 ? ((last - first) / first) * 100 : 0;
   const deltaColor = pct > 0 ? "#4ade80" : pct < 0 ? "#f87171" : "#888";
 
+  const hasWeeks = entries.some(e => e.week !== undefined);
+  const subtitle = hasWeeks
+    ? (() => {
+        const weeks = entries.map(e => e.week).filter((w): w is number => w !== undefined);
+        const minWeek = Math.min(...weeks);
+        const maxWeek = Math.max(...weeks);
+        return minWeek === maxWeek ? `J${minWeek}` : `Jornadas J${minWeek}–J${maxWeek}`;
+      })()
+    : `Últimas ${entries.length} actualizaciones`;
+
+  const xTickFormatter = (value: string) => {
+    const entry = entries.find(e => e.date === value);
+    if (entry?.week !== undefined) return `J${entry.week}`;
+    // fallback: format date as DD/M
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) return `${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
+    return value;
+  };
+
   return (
     <div style={{ background: "#111111", borderRadius: 12, padding: 20, border: "1px solid #1E1E1E" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -40,7 +59,7 @@ export function PriceHistoryChart({ entries }: Props) {
             Historial de precio
           </div>
           <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
-            Últimas {entries.length} actualizaciones
+            {subtitle}
           </div>
         </div>
         {entries.length >= 2 && (
@@ -49,9 +68,15 @@ export function PriceHistoryChart({ entries }: Props) {
           </div>
         )}
       </div>
-      <ResponsiveContainer width="100%" height={100}>
+      <ResponsiveContainer width="100%" height={110}>
         <LineChart data={entries} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-          <XAxis dataKey="date" hide />
+          <XAxis
+            dataKey="date"
+            tickFormatter={xTickFormatter}
+            tick={{ fill: "#555", fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif" }}
+            axisLine={false}
+            tickLine={false}
+          />
           <YAxis domain={[minP * 0.95, maxP * 1.05]} hide />
           <Tooltip content={<PriceTooltip />} cursor={{ stroke: "#2A2A2A" }} wrapperStyle={{ outline: "none" }} />
           <ReferenceLine y={first} stroke="#2A2A2A" strokeDasharray="3 3" />
