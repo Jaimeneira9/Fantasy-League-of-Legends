@@ -1280,6 +1280,7 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
   const [animationKey, setAnimationKey] = useState(0);
   const [splits, setSplits]             = useState<Split[]>([]);
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
+  const [splitInitializing, setSplitInitializing] = useState(true);
 
   // Cargar splits en el mount y pre-seleccionar el split activo
   useEffect(() => {
@@ -1287,16 +1288,18 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
       setSplits(data);
       const active = data.find((s) => s.is_active);
       if (active) setSelectedSplitId(active.id);
-    }).catch(() => {/* no-op — filtro de split es opcional */});
+      setSplitInitializing(false);
+    }).catch(() => { setSplitInitializing(false); /* no-op — filtro de split es opcional */ });
   }, []);
 
   const load = useCallback(() => {
+    if (splitInitializing) return;
     setLoading(true);
     api.players.scout(leagueId, selectedSplitId ?? undefined)
       .then((data) => { setPlayers(data); setAnimationKey((k) => k + 1); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [leagueId, selectedSplitId]);
+  }, [leagueId, selectedSplitId, splitInitializing]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1339,7 +1342,7 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
       return sortDir === "desc" ? -diff : diff;
     });
 
-  if (loading) return <ListSkeleton rows={8} />;
+  if (splitInitializing || loading) return <ListSkeleton rows={8} />;
   if (error)   return <ErrorState message={error} onRetry={load} />;
 
   return (

@@ -274,6 +274,7 @@ export default function TeamsPage() {
   const [animationKey, setAnimationKey] = useState(0);
   const [splits, setSplits] = useState<Split[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(true);
 
   // On mount: load splits and default to the active one
   useEffect(() => {
@@ -286,19 +287,17 @@ export default function TeamsPage() {
         const activeSplit = splitList.find((s) => s.is_active);
         const defaultId = activeSplit?.id ?? splitList[0]?.id ?? null;
         setSelectedCompetitionId(defaultId);
+        setInitializing(false);
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) { setError(e.message); setInitializing(false); }
       });
     return () => { cancelled = true; };
   }, []);
 
   // Fetch standings whenever leagueId or selectedCompetitionId changes
   useEffect(() => {
-    if (selectedCompetitionId === null) return;
+    if (selectedCompetitionId === null || initializing) return;
     setLoading(true);
     setError(null);
     api.teams
@@ -306,7 +305,7 @@ export default function TeamsPage() {
       .then((d) => { setData(d); setAnimationKey((k) => k + 1); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [leagueId, selectedCompetitionId]);
+  }, [leagueId, selectedCompetitionId, initializing]);
 
   const sortedEntries = useMemo(() => {
     if (!data) return [];
@@ -427,7 +426,7 @@ export default function TeamsPage() {
         )}
 
         {/* Loading skeleton */}
-        {loading && <SkeletonRows />}
+        {(initializing || loading) && <SkeletonRows />}
 
         {/* Error */}
         {error && (
