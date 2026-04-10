@@ -11,6 +11,8 @@ import { getTeamBadgeUrl } from "@/components/PlayerCard";
 import { getRoleColor } from "@/lib/roles";
 import { PriceTrend } from "@/components/PriceTrend";
 import { ActionPopup } from "@/components/ActionPopup";
+import FilterDrawer, { FilterDrawerFilters } from "@/components/FilterDrawer";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,6 +74,7 @@ export default function MarketPage() {
   const tabFromUrl = searchParams.get("tab");
   const tab: Tab = (tabFromUrl ? URL_TAB_MAP[tabFromUrl] : null) ?? "mercado";
 
+  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
   const [budget, setBudget]               = useState<number | null>(null);
   const [retainedBudget, setRetainedBudget] = useState(0);
   const [bidsByListing, setBidsByListing] = useState<Map<string, number>>(new Map());
@@ -222,13 +225,20 @@ export default function MarketPage() {
               <button
                 key={key}
                 onClick={() => router.push(`?tab=${key}`)}
-                className="px-4 py-2 text-xs font-bold transition-all active:scale-95 flex-shrink-0"
+                onMouseEnter={() => !isActive && setHoveredTab(key)}
+                onMouseLeave={() => setHoveredTab(null)}
+                className="px-4 py-2 text-xs font-bold active:scale-95 flex-shrink-0"
                 style={{
                   fontFamily: "'Space Grotesk', sans-serif",
                   borderRadius: "20px",
-                  background: isActive ? "#FCD400" : "#1A1A1A",
-                  color:      isActive ? "#111111" : "#555555",
-                  border:     isActive ? "1px solid #FCD400" : "1px solid #2A2A2A",
+                  background: isActive
+                    ? "#FCD400"
+                    : hoveredTab === key
+                      ? "rgba(255,255,255,0.06)"
+                      : "#1A1A1A",
+                  color:  isActive ? "#111111" : "#555555",
+                  border: isActive ? "1px solid #FCD400" : "1px solid #2A2A2A",
+                  transition: "all 150ms",
                 }}
               >
                 {label}
@@ -243,7 +253,7 @@ export default function MarketPage() {
         {tab === "mercado"   && <MarketTab  leagueId={leagueId} budget={budget} availableBudget={budget !== null ? budget - retainedBudget : null} splitName={split?.name} onBid={refreshBudget} isMobile={isMobile} bidsByListing={bidsByListing} />}
         {tab === "mis-pujas" && <MyBidsTab  leagueId={leagueId} />}
         {tab === "ofertas"   && <OffersTab  leagueId={leagueId} />}
-        {tab === "explorar"  && <ScoutTab   leagueId={leagueId} />}
+        {tab === "explorar"  && <ScoutTab   leagueId={leagueId} isMobile={isMobile} />}
       </main>
 
     </div>
@@ -354,28 +364,32 @@ function MarketTab({
           />
         </div>
 
-        {/* Role pills */}
-        <div className="flex gap-2 flex-wrap">
-          {roles.map((r) => {
-            const active = roleFilter === r;
-            return (
-              <button
-                key={r}
-                onClick={() => setRoleFilter(r)}
-                className="px-3 py-1.5 text-xs transition-all duration-150 active:scale-95"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontWeight: active ? 700 : 400,
-                  borderRadius: "6px",
-                  background: active ? "#FCD400" : "#1A1A1A",
-                  color: active ? "#111111" : "#555555",
-                  border: active ? "1px solid #FCD400" : "1px solid #2A2A2A",
-                }}
-              >
-                {roleLabels[r] ?? r.toUpperCase()}
-              </button>
-            );
-          })}
+        {/* Role select */}
+        <div style={{ position: "relative", display: "inline-flex", alignItems: "stretch", width: "fit-content" }}>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            style={{
+              appearance: "none",
+              background: "#1A1A1A",
+              border: "1px solid #2A2A2A",
+              borderRadius: 8,
+              padding: "8px 36px 8px 12px",
+              color: "#F0E8D0",
+              fontSize: 13,
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontWeight: 600,
+              cursor: "pointer",
+              outline: "none",
+            }}
+          >
+            {roles.map((r) => (
+              <option key={r} value={r}>{roleLabels[r] ?? r.toUpperCase()}</option>
+            ))}
+          </select>
+          <svg style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 4L6 8L10 4" stroke="#555555" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
       </div>
 
@@ -492,174 +506,124 @@ function PlayerCard({
 
   // ── MOBILE: horizontal card ──────────────────────────────────────────────
   if (isMobile) {
+    const bidLabel = success
+      ? "✓ Enviada"
+      : closed
+      ? "Cerrado"
+      : existingBid != null && existingBid > 0
+      ? `Pujar · ${existingBid.toFixed(1)}M`
+      : `Pujar · ${listing.ask_price.toFixed(1)}M`;
+
     return (
       <div
-        className="group relative flex flex-row overflow-hidden transition-all duration-150 active:scale-[0.99]"
+        className="transition-all duration-150 active:scale-[0.99]"
         style={{
           width: "100%",
-          borderRadius: "12px",
+          borderRadius: "14px",
           border: success ? "1px solid rgba(34,197,94,0.4)" : "1px solid #222222",
           background: "#111111",
           overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        {/* LEFT: image 64×80 */}
-        <button
-          type="button"
-          onClick={onOpenStats}
-          className="focus:outline-none flex-shrink-0"
-          aria-label={`Ver estadísticas de ${p.name}`}
-          style={{ width: 64, height: 80, position: "relative", background: roleColorHex }}
-        >
-          {p.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={p.image_url}
-              alt={p.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <span
-                style={{
-                  fontSize: "24px",
-                  fontWeight: 700,
-                  fontFamily: "'Barlow Condensed', sans-serif",
-                  color: "rgba(255,255,255,0.15)",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {initials}
+        {/* TOP: photo + info */}
+        <div style={{ display: "flex", flexDirection: "row" }}>
+          {/* Photo — 72×96, rounded top-left */}
+          <button
+            type="button"
+            onClick={onOpenStats}
+            className="focus:outline-none flex-shrink-0 hover:brightness-75 transition-all duration-150"
+            aria-label={`Ver estadísticas de ${p.name}`}
+            style={{ width: 72, height: 96, position: "relative", background: roleColorHex, borderRadius: "10px 0 0 0", overflow: "hidden" }}
+          >
+            {p.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={p.image_url}
+                alt={p.name}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <span style={{ fontSize: "24px", fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", color: "rgba(255,255,255,0.15)", letterSpacing: "0.05em" }}>
+                  {initials}
+                </span>
+              </div>
+            )}
+            {/* Role color bar */}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: roleColorHex, filter: "brightness(1.4)" }} />
+            {success && (
+              <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }}>
+                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+          </button>
+
+          {/* Info */}
+          <div style={{ flex: 1, minWidth: 0, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
+            <button type="button" onClick={onOpenStats} className="text-left focus:outline-none">
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 700, color: "#F0E8D0", lineHeight: 1, letterSpacing: "-0.01em" }}>
+                {p.name}
+              </span>
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 2 }}>
+              <span style={{ background: `${roleColorHex}30`, color: roleColorHex, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, letterSpacing: "0.06em" }}>
+                {ROLE_LABEL[p.role] ?? p.role.toUpperCase()}
+              </span>
+              <span style={{ fontSize: 11, color: "#555555", fontFamily: "'Space Grotesk', sans-serif" }}>{p.team}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#FCD400", lineHeight: 1 }}>
+                {p.split_points != null ? Math.round(p.split_points) : "—"}
+              </span>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#555555", fontWeight: 600 }}>pts</span>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#FCD400", marginLeft: "auto", display: "flex", alignItems: "baseline", gap: 6 }}>
+                {p.current_price.toFixed(2)}M
+                <PriceTrend changePct={p.last_price_change_pct ?? 0} />
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: "#1E1E1E", marginInline: 12 }} />
+
+        {/* BOTTOM: timer + pujas + button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
+          {/* Timer */}
+          {listing.closes_at && !closed && countdown && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 7, padding: "6px 10px", flexShrink: 0 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 700, color: "#888888" }}>{countdown}</span>
+            </div>
+          )}
+          {closed && (
+            <div style={{ display: "flex", alignItems: "center", background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 7, padding: "6px 10px", flexShrink: 0 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 700, color: "#C62828" }}>Cerrado</span>
+            </div>
+          )}
+          {/* Pujas count */}
+          {(listing.bid_count ?? 0) > 0 && (
+            <div style={{ display: "flex", alignItems: "center", background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 7, padding: "6px 10px", flexShrink: 0 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, fontWeight: 600, color: "#555555" }}>
+                {listing.bid_count} {listing.bid_count === 1 ? "puja" : "pujas"}
               </span>
             </div>
           )}
-          {success && (
-            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }}>
-              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          )}
-        </button>
-
-        {/* RIGHT: info stacked */}
-        <div style={{ flex: 1, minWidth: 0, padding: "8px 10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-          {/* Row 1: name */}
-          <button type="button" onClick={onOpenStats} className="text-left focus:outline-none">
-            <p
-              style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
-                fontSize: "13px",
-                fontWeight: 700,
-                color: "#FFFFFF",
-                lineHeight: 1.2,
-                margin: 0,
-              }}
-            >
-              {p.name}
-            </p>
-          </button>
-
-          {/* Row 2: role + team */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span
-              style={{
-                backgroundColor: roleColorHex,
-                borderRadius: "3px",
-                padding: "1px 5px",
-                fontSize: "9px",
-                fontWeight: 700,
-                color: "#000000",
-              }}
-            >
-              {ROLE_LABEL[p.role] ?? p.role.toUpperCase()}
-            </span>
-            <span style={{ fontSize: "11px", color: "#888888", fontFamily: "'Space Grotesk', sans-serif" }}>
-              {p.team}
-            </span>
-          </div>
-
-          {/* Row 3: price + pts */}
-          <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-            <span
-              style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
-                fontSize: "16px",
-                fontWeight: 700,
-                color: "#FCD400",
-                letterSpacing: "-0.02em",
-                lineHeight: 1,
-              }}
-            >
-              {p.split_points != null ? Math.round(p.split_points) : "—"}
-            </span>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px", color: "#888888" }}>pts</span>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "11px", color: "#777777", marginLeft: "auto", display: "flex", alignItems: "baseline", gap: "3px" }}>
-              {p.current_price.toFixed(2)}M
-              <PriceTrend changePct={p.last_price_change_pct ?? 0} />
-            </span>
-          </div>
-
-          {/* Row 4: badges row */}
-          <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
-            <span
-              style={{
-                display: "inline-block",
-                fontSize: "9px",
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 600,
-                color: "#FCD400",
-                background: "rgba(252,212,0,0.08)",
-                border: "1px solid rgba(252,212,0,0.18)",
-                borderRadius: "4px",
-                padding: "1px 5px",
-                visibility: (listing.bid_count ?? 0) >= 1 ? "visible" : "hidden",
-              }}
-            >
-              {listing.bid_count} {listing.bid_count === 1 ? "puja" : "pujas"}
-            </span>
-          </div>
-
-          {/* Countdown */}
-          {listing.closes_at && !closed && countdown && (
-            <p
-              className="font-mono"
-              style={{ fontSize: "10px", color: "#888888", margin: 0 }}
-            >
-              ⏱ {countdown}
-            </p>
-          )}
-          {closed && (
-            <p style={{ fontSize: "10px", color: "#C62828", margin: 0 }}>
-              Cerrado
-            </p>
-          )}
-
-          {/* Row 5: action button */}
-          <div style={{ marginTop: "auto" }}>
-            <button
-              onClick={() => { if (!closed) { setSuccess(false); onOpenPopup(); } }}
-              disabled={closed}
-              className="w-full transition-all duration-150 active:scale-95"
-              style={{
-                borderRadius: "6px",
-                padding: "4px 10px",
-                fontSize: "11px",
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 700,
-                cursor: closed ? "not-allowed" : "pointer",
-                opacity: closed ? 0.4 : 1,
-                ...(success
-                  ? { background: "transparent", border: "1px solid rgba(34,197,94,0.4)", color: "rgb(22,163,74)" }
-                  : hasBudget && !closed
-                    ? { background: "#FCD400", border: "1px solid #FCD400", color: "#111111" }
-                    : { background: "transparent", border: "1px solid #333333", color: "#555555" }
-                ),
-              }}
-            >
-              {success ? "✓ Enviada" : closed ? "Cerrado" : existingBid != null && existingBid > 0 ? `${existingBid.toFixed(1)}M` : "Fichar"}
-            </button>
-          </div>
+          {/* Action button */}
+          <Button
+            variant={success ? "feedback-success" : hasBudget && !closed ? "primary" : "secondary"}
+            onClick={() => { if (!closed) { setSuccess(false); onOpenPopup(); } }}
+            disabled={closed}
+            className="flex-1"
+          >
+            {bidLabel}
+          </Button>
         </div>
       </div>
     );
@@ -691,7 +655,7 @@ function PlayerCard({
         <button
           type="button"
           onClick={onOpenStats}
-          className="absolute inset-0 focus:outline-none"
+          className="absolute inset-0 focus:outline-none hover:brightness-75 transition-all duration-150"
           aria-label={`Ver estadísticas de ${p.name}`}
         >
           {p.image_url ? (
@@ -823,7 +787,7 @@ function PlayerCard({
             style={{
               fontFamily: "'Space Grotesk', sans-serif",
               fontSize: "12px",
-              color: "#777777",
+              color: "#FCD400",
               marginLeft: "auto",
               display: "flex",
               alignItems: "baseline",
@@ -835,66 +799,51 @@ function PlayerCard({
           </span>
         </div>
 
-        {/* Countdown */}
-        {listing.closes_at && !closed && countdown && (
-          <p
-            className="font-mono"
-            style={{ fontSize: "11px", color: "#888888", marginTop: "2px" }}
-          >
-            ⏱ {countdown}
-          </p>
-        )}
-        {closed && (
-          <p style={{ fontSize: "10px", color: "#C62828", marginTop: "2px" }}>
-            Cerrado
-          </p>
-        )}
-
-        {/* Bid count badge — always rendered to reserve space */}
-        <span
-          style={{
-            display: "inline-block",
-            alignSelf: "flex-start",
-            fontSize: "10px",
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 600,
-            color: "#FCD400",
-            background: "rgba(252,212,0,0.08)",
-            border: "1px solid rgba(252,212,0,0.18)",
-            borderRadius: "4px",
-            padding: "2px 7px",
-            marginTop: "2px",
-            visibility: (listing.bid_count ?? 0) >= 1 ? "visible" : "hidden",
-          }}
-        >
-          {listing.bid_count} {listing.bid_count === 1 ? "puja" : "pujas"}
-        </span>
-
-
-        {/* Fila 4 — Bid button */}
-        <div style={{ marginTop: "auto", paddingTop: "4px" }}>
-          <button
+        {/* Fila 4 — chips row + button row */}
+        <div style={{ marginTop: "auto", paddingTop: "6px", display: "flex", flexDirection: "column", gap: 6 }}>
+          {/* Row 1: combined timer+pujas chip left, green bid chip right */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+            {/* Combined timer + pujas chip — left */}
+            {listing.closes_at && !closed && countdown && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 20, padding: "4px 10px", flexShrink: 0 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 700, color: "#888888" }}>{countdown}</span>
+                {(listing.bid_count ?? 0) > 0 && (
+                  <>
+                    <div style={{ width: 1, height: 12, background: "#2A2A2A" }} />
+                    <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 600, color: "#FCD400" }}>
+                      {listing.bid_count} {listing.bid_count === 1 ? "puja" : "pujas"}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+            {/* Closed chip — left */}
+            {closed && (
+              <div style={{ display: "flex", alignItems: "center", background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 20, padding: "4px 10px", flexShrink: 0 }}>
+                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 700, color: "#C62828" }}>Cerrado</span>
+              </div>
+            )}
+          </div>
+          {/* Row 2: action button full width */}
+          <Button
+            variant={
+              success
+                ? "feedback-success"
+                : (existingBid != null && existingBid > 0 && !closed)
+                  ? "feedback-success"
+                  : (hasBudget && !closed)
+                    ? "primary"
+                    : "secondary"
+            }
             onClick={() => { if (!closed) { setSuccess(false); onOpenPopup(); } }}
             disabled={closed}
-            className="w-full transition-all duration-150 active:scale-95"
-            style={{
-              borderRadius: "6px",
-              padding: "6px 12px",
-              fontSize: "12px",
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 700,
-              cursor: closed ? "not-allowed" : "pointer",
-              opacity: closed ? 0.4 : 1,
-              ...(success
-                ? { background: "transparent", border: "1px solid rgba(34,197,94,0.4)", color: "rgb(22,163,74)" }
-                : hasBudget && !closed
-                  ? { background: "#FCD400", border: "1px solid #FCD400", color: "#111111" }
-                  : { background: "transparent", border: "1px solid #333333", color: "#555555" }
-              ),
-            }}
+            fullWidth
           >
-            {success ? "✓ Puja enviada" : closed ? "Cerrado" : existingBid != null && existingBid > 0 ? `${existingBid.toFixed(1)}M` : "Fichar"}
-          </button>
+            {success ? "✓ Enviada" : closed ? "Cerrado" : existingBid != null && existingBid > 0 ? `Pujar · ${existingBid.toFixed(1)}M` : `Pujar · ${listing.ask_price.toFixed(1)}M`}
+          </Button>
         </div>
       </div>
     </div>
@@ -1009,7 +958,7 @@ function BidRow({ bid, leagueId, onCancel }: { bid: MyBid; leagueId: string; onC
             className="text-[10px] mt-0.5 font-mono"
             style={{ color: "#555555" }}
           >
-            ⏱ {countdown}
+            {countdown}
           </p>
         )}
       </div>
@@ -1067,27 +1016,16 @@ function BidRow({ bid, leagueId, onCancel }: { bid: MyBid; leagueId: string; onC
         </span>
       )}
       {bid.status === "active" && (
-        <button
+        <Button
+          variant="destructive"
+          size="sm"
           onClick={handleCancel}
           disabled={busy || countdown === "Cerrado"}
-          className="px-3 py-1.5 text-xs rounded-lg transition-all disabled:opacity-40 active:scale-95 flex-shrink-0"
-          style={{
-            color: "#555555",
-            border: "1px solid #2A2A2A",
-            background: "transparent",
-            fontFamily: "'Space Grotesk', sans-serif",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(198,40,40,0.4)";
-            (e.currentTarget as HTMLButtonElement).style.color = "#C62828";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "#2A2A2A";
-            (e.currentTarget as HTMLButtonElement).style.color = "#555555";
-          }}
+          isLoading={busy}
+          className="flex-shrink-0"
         >
           {busy ? "…" : "Cancelar"}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -1258,41 +1196,24 @@ function OfferRow({ offer, leagueId, onAction }: { offer: SellOffer; leagueId: s
       </div>
       {err && <span className="text-red-500 text-xs">{err}</span>}
       <div className="flex gap-2 flex-shrink-0">
-        <button
+        <Button
+          variant="destructive"
+          size="sm"
           onClick={() => handle("reject")}
           disabled={busy !== null}
-          className="px-2 sm:px-3 py-1.5 text-xs rounded-lg transition-all disabled:opacity-40 active:scale-95"
-          style={{
-            color: "#555555",
-            border: "1px solid #2A2A2A",
-            background: "transparent",
-            fontFamily: "'Space Grotesk', sans-serif",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(198,40,40,0.4)";
-            (e.currentTarget as HTMLButtonElement).style.color = "#C62828";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "#2A2A2A";
-            (e.currentTarget as HTMLButtonElement).style.color = "#555555";
-          }}
+          isLoading={busy === "reject"}
         >
           {busy === "reject" ? "…" : "Rechazar"}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => handle("accept")}
           disabled={busy !== null}
-          className="px-2 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all disabled:opacity-40 active:scale-95"
-          style={{
-            background: "#FCD400",
-            color: "#111111",
-            border: "1px solid #FCD400",
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 700,
-          }}
+          isLoading={busy === "accept"}
         >
           {busy === "accept" ? "…" : "Aceptar"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -1315,18 +1236,23 @@ type SortField =
   | "avg_vision_score";
 type SortDir = "asc" | "desc";
 
-function ScoutTab({ leagueId }: { leagueId: string }) {
+function ScoutTab({ leagueId, isMobile }: { leagueId: string; isMobile?: boolean }) {
   const router = useRouter();
   const [players, setPlayers]           = useState<ScoutPlayer[]>([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
-  const [roleFilter, setRoleFilter]     = useState<string>("all");
-  const [teamFilter, setTeamFilter]     = useState<string>("all");
+  const [filters, setFilters]           = useState<FilterDrawerFilters>({
+    splitId: null,
+    role: "all",
+    team: "all",
+    priceMin: 0,
+    priceMax: 20,
+  });
+  const [drawerOpen, setDrawerOpen]     = useState(false);
   const [sortField, setSortField]       = useState<SortField>("total_points");
   const [sortDir, setSortDir]           = useState<SortDir>("desc");
   const [animationKey, setAnimationKey] = useState(0);
   const [splits, setSplits]             = useState<Split[]>([]);
-  const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
   const [splitInitializing, setSplitInitializing] = useState(true);
 
   // Cargar splits en el mount y pre-seleccionar el split activo
@@ -1334,7 +1260,7 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
     api.splits.list().then((data) => {
       setSplits(data);
       const active = data.find((s) => s.is_active);
-      if (active) setSelectedSplitId(active.id);
+      setFilters(f => ({ ...f, splitId: active?.id ?? data[0]?.id ?? null }));
       setSplitInitializing(false);
     }).catch(() => { setSplitInitializing(false); /* no-op — filtro de split es opcional */ });
   }, []);
@@ -1342,20 +1268,26 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
   const load = useCallback(() => {
     if (splitInitializing) return;
     setLoading(true);
-    api.players.scout(leagueId, selectedSplitId ?? undefined)
+    api.players.scout(leagueId, filters.splitId ?? undefined)
       .then((data) => { setPlayers(data); setAnimationKey((k) => k + 1); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [leagueId, selectedSplitId, splitInitializing]);
+  }, [leagueId, filters.splitId, splitInitializing]);
 
   useEffect(() => { load(); }, [load]);
 
-  const roles = ["all", "top", "jungle", "mid", "adc", "support"];
   const roleLabels: Record<string, string> = {
     all: "TODOS", top: "TOP", jungle: "JGL", mid: "MID", adc: "ADC", support: "SUP",
   };
 
-  const teams = ["all", ...Array.from(new Set(players.map((p) => p.team))).sort()];
+  const teamsWithoutAll = Array.from(new Set(players.map((p) => p.team))).sort();
+
+  const activeFilterCount = [
+    splits.length > 0 && filters.splitId !== (splits[0]?.id ?? null),
+    filters.role !== "all",
+    filters.team !== "all",
+    filters.priceMin !== 0 || filters.priceMax !== 20,
+  ].filter(Boolean).length;
 
   const kda = (p: ScoutPlayer) => p.total_deaths > 0
     ? (p.total_kills + p.total_assists) / p.total_deaths
@@ -1382,8 +1314,9 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
   };
 
   const filtered = players
-    .filter((p) => roleFilter === "all" || p.role === roleFilter)
-    .filter((p) => teamFilter === "all" || p.team === teamFilter)
+    .filter((p) => filters.role === "all" || p.role === filters.role)
+    .filter((p) => filters.team === "all" || p.team === filters.team)
+    .filter((p) => p.current_price >= filters.priceMin && p.current_price <= filters.priceMax)
     .sort((a, b) => {
       const diff = getSortValue(a) - getSortValue(b);
       return sortDir === "desc" ? -diff : diff;
@@ -1395,68 +1328,50 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
   return (
     <div>
       {/* Filtros */}
-      <div className="flex flex-col gap-3 mb-6">
-        {/* Fila 0: split/competición chips */}
-        {splits.length > 0 && (
-          <div className="flex flex-wrap gap-2 items-center">
-            {splits.map((split) => {
-              const isActive = split.id === selectedSplitId;
-              return (
-                <button
-                  key={split.id}
-                  onClick={() => setSelectedSplitId(split.id)}
-                  style={{
-                    background: isActive ? "#FCD400" : "#1A1A1A",
-                    border: `1px solid ${isActive ? "#FCD400" : "#2A2A2A"}`,
-                    borderRadius: "6px",
-                    padding: "5px 12px",
-                    color: isActive ? "#000" : "#888888",
-                    fontSize: 11,
-                    fontWeight: isActive ? 700 : 500,
-                    cursor: "pointer",
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {split.name}
-                </button>
-              );
-            })}
-          </div>
-        )}
+      <div className="flex flex-nowrap items-center gap-2 mb-4 overflow-x-auto">
+        {/* Filtros button */}
+        <button
+          onClick={() => setDrawerOpen(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: activeFilterCount > 0 ? "#FCD400" : "#1A1A1A",
+            border: `1px solid ${activeFilterCount > 0 ? "#FCD400" : "#2A2A2A"}`,
+            borderRadius: 6,
+            padding: "5px 12px",
+            color: activeFilterCount > 0 ? "#000" : "#888888",
+            fontSize: 11,
+            fontWeight: activeFilterCount > 0 ? 700 : 500,
+            cursor: "pointer",
+            fontFamily: "'Space Grotesk', sans-serif",
+            letterSpacing: "0.04em",
+            flexShrink: 0,
+          }}
+        >
+          FILTROS
+          {activeFilterCount > 0 && (
+            <span style={{
+              background: activeFilterCount > 0 ? "#000" : "#FCD400",
+              color: activeFilterCount > 0 ? "#FCD400" : "#000",
+              borderRadius: "50%",
+              width: 16,
+              height: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              fontWeight: 700,
+            }}>{activeFilterCount}</span>
+          )}
+        </button>
 
-        {/* Fila 1: roles + equipo + sort */}
-        <div className="flex flex-nowrap overflow-x-auto gap-1 sm:flex-wrap sm:gap-2 items-center">
-          {/* Pills de rol */}
-          {roles.map((r) => {
-            const active = roleFilter === r;
-            return (
-              <button
-                key={r}
-                onClick={() => { setRoleFilter(r); setAnimationKey((k) => k + 1); }}
-                className="px-2 sm:px-3 py-1.5 text-xs sm:text-xs transition-all duration-150 active:scale-95 flex-shrink-0"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontWeight: active ? 700 : 400,
-                  borderRadius: "6px",
-                  background: active ? "#FCD400" : "#1A1A1A",
-                  color: active ? "#111111" : "#555555",
-                  border: active ? "1px solid #FCD400" : "1px solid #2A2A2A",
-                }}
-              >
-                {roleLabels[r] ?? r.toUpperCase()}
-              </button>
-            );
-          })}
-
-          {/* Separador visual */}
-          <div className="hidden sm:block flex-shrink-0" style={{ width: "1px", height: "20px", background: "#2A2A2A" }} />
-
-          {/* Dropdown de equipo */}
+        {/* Sort controls */}
+        <div className="flex items-center gap-1 ml-auto flex-shrink-0">
           <select
-            value={teamFilter}
-            onChange={(e) => { setTeamFilter(e.target.value); setAnimationKey((k) => k + 1); }}
-            className="outline-none flex-shrink-0"
+            value={sortField}
+            onChange={(e) => { setSortField(e.target.value as SortField); setSortDir("desc"); setAnimationKey((k) => k + 1); }}
+            className="outline-none"
             style={{
               background: "#1A1A1A",
               border: "1px solid #2A2A2A",
@@ -1468,54 +1383,29 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
               fontSize: "11px",
             }}
           >
-            {teams.map((t) => (
-              <option key={t} value={t} style={{ background: "#1A1A1A" }}>
-                {t === "all" ? "Equipos" : t}
+            {sortOptions.map((o) => (
+              <option key={o.value} value={o.value} style={{ background: "#1A1A1A" }}>
+                {o.label}
               </option>
             ))}
           </select>
-
-          {/* Sort dropdown */}
-          <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-            <select
-              value={sortField}
-              onChange={(e) => { setSortField(e.target.value as SortField); setSortDir("desc"); setAnimationKey((k) => k + 1); }}
-              className="outline-none"
-              style={{
-                background: "#1A1A1A",
-                border: "1px solid #2A2A2A",
-                borderRadius: "6px",
-                color: "#888888",
-                padding: "5px 6px",
-                fontFamily: "'Space Grotesk', sans-serif",
-                cursor: "pointer",
-                fontSize: "11px",
-              }}
-            >
-              {sortOptions.map((o) => (
-                <option key={o.value} value={o.value} style={{ background: "#1A1A1A" }}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => { setSortDir((d) => (d === "desc" ? "asc" : "desc")); setAnimationKey((k) => k + 1); }}
-              className="transition-all active:scale-95 flex-shrink-0"
-              style={{
-                background: "#1A1A1A",
-                border: "1px solid #2A2A2A",
-                borderRadius: "6px",
-                padding: "5px 7px",
-                color: "#888888",
-                fontSize: "12px",
-                fontFamily: "'Space Grotesk', sans-serif",
-                cursor: "pointer",
-              }}
-              title={sortDir === "desc" ? "Descendente" : "Ascendente"}
-            >
-              {sortDir === "desc" ? "↓" : "↑"}
-            </button>
-          </div>
+          <button
+            onClick={() => { setSortDir((d) => (d === "desc" ? "asc" : "desc")); setAnimationKey((k) => k + 1); }}
+            className="transition-all active:scale-95 flex-shrink-0"
+            style={{
+              background: "#1A1A1A",
+              border: "1px solid #2A2A2A",
+              borderRadius: "6px",
+              padding: "5px 7px",
+              color: "#888888",
+              fontSize: "12px",
+              fontFamily: "'Space Grotesk', sans-serif",
+              cursor: "pointer",
+            }}
+            title={sortDir === "desc" ? "Descendente" : "Ascendente"}
+          >
+            {sortDir === "desc" ? "↓" : "↑"}
+          </button>
         </div>
       </div>
 
@@ -1554,6 +1444,21 @@ function ScoutTab({ leagueId }: { leagueId: string }) {
         </div>
       )}
 
+      <FilterDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onApply={(f) => {
+          setFilters(f);
+          setDrawerOpen(false);
+          setAnimationKey((k) => k + 1);
+        }}
+        committed={filters}
+        splits={splits}
+        teams={teamsWithoutAll}
+        roleLabels={roleLabels}
+        isMobile={isMobile ?? false}
+      />
+
     </div>
   );
 }
@@ -1568,7 +1473,7 @@ function ScoutRow({ player: p, animationDelay, onOpen }: { player: ScoutPlayer; 
     <button
       type="button"
       onClick={onOpen}
-      className="w-full text-left group animate-cascade-in"
+      className="w-full text-left group animate-cascade-in active:scale-[0.98] transition-all duration-150"
       style={{ animationDelay: `${animationDelay}ms` }}
     >
       <div
@@ -1705,6 +1610,9 @@ function ScoutRow({ player: p, animationDelay, onOpen }: { player: ScoutPlayer; 
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontSize: "12px",
                 color: "#444444",
+                display: "inline-flex",
+                alignItems: "baseline",
+                gap: 10,
               }}
             >
               {p.current_price.toFixed(2)}M
@@ -1742,21 +1650,8 @@ function ScoutRow({ player: p, animationDelay, onOpen }: { player: ScoutPlayer; 
             </div>
           </div>
 
-          {/* Mobile: botón "Ver más" */}
-          <span
-            className="sm:hidden flex-shrink-0 ml-1"
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: "10px",
-              color: "#555555",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Ver más →
-          </span>
-
           {/* Desktop: grid completo con todas las stats */}
-          <div className="hidden sm:grid sm:grid-cols-5 gap-x-3 gap-y-1">
+          <div className="hidden sm:grid sm:grid-cols-5 gap-x-3 gap-y-1 flex-shrink-0">
             {/* PTS */}
             <div className="flex flex-col items-center justify-center">
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px", fontWeight: 700, color: "#555555", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1px" }}>PTS</span>
@@ -1878,26 +1773,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       <p className="text-sm mb-4" style={{ color: "#555555", fontFamily: "'Space Grotesk', sans-serif" }}>
         {message}
       </p>
-      <button
-        onClick={onRetry}
-        className="text-sm rounded-lg px-4 py-2 transition-all active:scale-95"
-        style={{
-          color: "#888888",
-          border: "1px solid #2A2A2A",
-          background: "transparent",
-          fontFamily: "'Space Grotesk', sans-serif",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.borderColor = "#FCD400";
-          (e.currentTarget as HTMLButtonElement).style.color = "#FCD400";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.borderColor = "#2A2A2A";
-          (e.currentTarget as HTMLButtonElement).style.color = "#888888";
-        }}
-      >
+      <Button variant="secondary" onClick={onRetry}>
         Reintentar
-      </button>
+      </Button>
     </div>
   );
 }

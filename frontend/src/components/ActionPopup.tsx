@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,6 +69,7 @@ export function ActionPopup({
   error = null,
 }: ActionPopupProps) {
   const [mounted, setMounted] = useState(false);
+  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
   const [amount, setAmount] = useState(
     existingBid != null ? existingBid.toFixed(2)
     : minAmount > 0     ? minAmount.toFixed(2)
@@ -139,8 +141,15 @@ export function ActionPopup({
           </p>
           <button
             onClick={onClose}
-            className="transition-colors"
-            style={{ color: "#555", fontSize: "18px", lineHeight: 1 }}
+            onMouseEnter={() => setHoveredBtn("close")}
+            onMouseLeave={() => setHoveredBtn(null)}
+            className="active:scale-95"
+            style={{
+              color: hoveredBtn === "close" ? "#FFFFFF" : "#555555",
+              fontSize: "18px",
+              lineHeight: 1,
+              transition: "all 150ms",
+            }}
           >
             ✕
           </button>
@@ -287,35 +296,22 @@ export function ActionPopup({
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
-            <button
+            <Button
+              variant="secondary"
               onClick={onClose}
-              className="flex-1 py-2 text-sm transition-colors"
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                color: "#555",
-                background: "transparent",
-                border: "1px solid #2a2a2a",
-                borderRadius: "8px",
-                cursor: "pointer",
-              }}
+              className="flex-1"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               onClick={handleConfirm}
               disabled={isLoading || (mode === "input" && !isValidAmount)}
-              className="flex-[2] py-2 text-sm font-bold rounded-lg transition-all active:scale-95 disabled:opacity-40"
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                background: "linear-gradient(135deg, #FCD400, #FCB900)",
-                color: "#111111",
-                borderRadius: "8px",
-                border: "none",
-                cursor: isLoading || (mode === "input" && !isValidAmount) ? "not-allowed" : "pointer",
-              }}
+              isLoading={isLoading}
+              className="flex-[2]"
             >
               {isLoading ? "…" : confirmLabel}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
