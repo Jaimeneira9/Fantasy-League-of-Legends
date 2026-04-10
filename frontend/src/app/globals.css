@@ -50,11 +50,6 @@ body {
   background: var(--bg-base);
   font-family: 'Inter', Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
-  cursor: url('/cursor-64.png'), auto;
-}
-
-*, *:hover, a, button, [role="button"], input, select, textarea, label, [tabindex] {
-  cursor: url('/cursor-64.png'), auto !important;
 }
 
 /* Quitar flechas de inputs numéricos */

@@ -74,7 +74,7 @@ export function PlayerCard({ player, matchStats = [], totalPoints, showPrice = t
 
   return (
     <div
-      className="group relative rounded-xl overflow-hidden transition-all duration-300 cursor-pointer select-none"
+      className="group relative rounded-xl overflow-hidden transition-all duration-300 cursor-pointer select-none active:scale-[0.98]"
       style={{
         borderLeft: `4px solid ${roleHex}`,
         background: "var(--bg-card)",
