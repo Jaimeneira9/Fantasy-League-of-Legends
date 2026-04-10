@@ -4,17 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { api, type TeamStandingEntry, type TeamStandingsOut, type Split } from "@/lib/api";
 
-// ---------------------------------------------------------------------------
-// Sort types
-// ---------------------------------------------------------------------------
-type SortKey = "wins" | "avg_kda" | "avg_gold_diff_15";
-
-const SORT_PILLS: { key: SortKey; label: string }[] = [
-  { key: "wins", label: "Resultados" },
-  { key: "avg_kda", label: "KDA" },
-  { key: "avg_gold_diff_15", label: "Gold @15" },
-];
-
 const TEAM_LOGO_BASE =
   "https://kjtifrtuknxtuuiyflza.supabase.co/storage/v1/object/public/FotosEquiposLec/";
 
@@ -77,7 +66,7 @@ function getPlayoffRowStyle(pos: number): React.CSSProperties {
   if (pos === 4) return { borderLeft: `${borderWidth}px solid ${green}`, borderBottom: `1px solid ${green}`, borderBottomLeftRadius: 6 };
   if (pos === 5) return { borderLeft: `${borderWidth}px solid ${yellow}`, borderTop: `1px solid ${yellow}`, borderTopLeftRadius: 6 };
   if (pos === 6) return { borderLeft: `${borderWidth}px solid ${yellow}`, borderBottom: `1px solid ${yellow}`, borderBottomLeftRadius: 6 };
-  return { borderLeft: `${borderWidth}px solid ${red}` }; // rows 7+ — open-ended red indicator
+  return { borderLeft: `${borderWidth}px solid ${red}` };
 }
 
 // ---------------------------------------------------------------------------
@@ -87,41 +76,20 @@ function TeamRow({
   entry,
   pos,
   animationDelay,
-  activeSort,
 }: {
   entry: TeamStandingEntry;
   pos: number;
   animationDelay: number;
-  activeSort: SortKey;
 }) {
   const isFirst = pos === 1;
 
   const posBadgeStyle: React.CSSProperties = isFirst
-    ? {
-        width: 24,
-        height: 24,
-        borderRadius: 6,
-        background: "#FCD400",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }
-    : {
-        width: 24,
-        height: 24,
-        borderRadius: 6,
-        background: "#2A2A2A",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      };
+    ? { width: 24, height: 24, borderRadius: 6, background: "#FCD400", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }
+    : { width: 24, height: 24, borderRadius: 6, background: "#2A2A2A", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
 
   const posNumStyle: React.CSSProperties = {
     fontFamily: "'Barlow Condensed', sans-serif",
-    fontSize: 13,
-    fontWeight: 700,
+    fontSize: 13, fontWeight: 700,
     color: isFirst ? "#111111" : "#555555",
   };
 
@@ -156,98 +124,56 @@ function TeamRow({
           src={teamLogoUrl(entry.team_name, entry.logo_url)}
           alt={entry.team_name}
           onError={(e) => { e.currentTarget.style.display = "none"; }}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            objectFit: "contain",
-            background: "#1A1A1A",
-            flexShrink: 0,
-          }}
+          style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "contain", background: "#1A1A1A", flexShrink: 0 }}
         />
-        <span
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 14,
-            fontWeight: 700,
-            color: isFirst ? "#F0E8D0" : "#888888",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
+        <span style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 14, fontWeight: 700,
+          color: isFirst ? "#F0E8D0" : "#888888",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
           {entry.team_name}
         </span>
       </div>
 
       {/* W */}
       <div style={{ width: 28, flexShrink: 0, textAlign: "center" }}>
-        <span style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 16,
-          fontWeight: 700,
-          color: activeSort === "wins" ? "#FCD400" : "#22C55E",
-        }}>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#22C55E" }}>
           {entry.wins}
         </span>
       </div>
 
       {/* L */}
       <div style={{ width: 28, flexShrink: 0, textAlign: "center" }}>
-        <span style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 16,
-          fontWeight: 700,
-          color: "#EF4444",
-        }}>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#EF4444" }}>
           {entry.losses}
         </span>
       </div>
 
       {/* W% */}
       <div style={{ width: 48, flexShrink: 0, textAlign: "center" }}>
-        <span style={{
-          fontSize: 12,
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontWeight: 600,
-          color: wl === 0 ? "#555555" : "#888888",
-        }}>
+        <span style={{ fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: wl === 0 ? "#555555" : "#888888" }}>
           {wl === 0 ? "—" : fmtPct(entry.win_rate)}
         </span>
       </div>
 
       {/* GW — desktop only */}
       <div style={{ width: 28, flexShrink: 0, textAlign: "center" }} className="hidden sm:block">
-        <span style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 16,
-          fontWeight: 700,
-          color: "#22C55E",
-        }}>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#22C55E" }}>
           {entry.game_wins}
         </span>
       </div>
 
       {/* GL — desktop only */}
       <div style={{ width: 28, flexShrink: 0, textAlign: "center" }} className="hidden sm:block">
-        <span style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 16,
-          fontWeight: 700,
-          color: "#EF4444",
-        }}>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#EF4444" }}>
           {entry.game_losses}
         </span>
       </div>
 
       {/* KDA — desktop only */}
       <div style={{ width: 56, flexShrink: 0, textAlign: "center" }} className="hidden sm:block">
-        <span style={{
-          fontSize: 12,
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontWeight: 600,
-          color: activeSort === "avg_kda" && entry.avg_kda != null ? "#FCD400" : entry.avg_kda == null ? "#555555" : "#888888",
-        }}>
+        <span style={{ fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: entry.avg_kda == null ? "#555555" : "#888888" }}>
           {fmt(entry.avg_kda, 2)}
         </span>
       </div>
@@ -258,18 +184,37 @@ function TeamRow({
           <span style={{ color: "#555555", fontSize: 12 }}>—</span>
         ) : (
           <span style={{
-            fontSize: 12,
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontWeight: 600,
-            color: activeSort === "avg_gold_diff_15"
-              ? "#FCD400"
-              : goldDiff != null && goldDiff >= 0 ? "#22C55E" : "#EF4444",
+            fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600,
+            color: goldDiff != null && goldDiff >= 0 ? "#22C55E" : "#EF4444",
           }}>
             {fmtGold(entry.avg_gold_diff_15)}
           </span>
         )}
       </div>
+    </div>
+  );
+}
 
+// ---------------------------------------------------------------------------
+// Playoff legend
+// ---------------------------------------------------------------------------
+const LEGEND_ITEMS = [
+  { color: "#22C55E", label: "Winner Bracket (1-4)" },
+  { color: "#EAB308", label: "Lower Bracket (5-6)" },
+  { color: "#EF4444", label: "Eliminado (7+)" },
+];
+
+function PlayoffLegend() {
+  return (
+    <div style={{ display: "flex", gap: 16, paddingInline: 4, flexWrap: "wrap" }}>
+      {LEGEND_ITEMS.map(({ color, label }) => (
+        <div key={color} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#555555" }}>
+            {label}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -282,13 +227,11 @@ export default function TeamsPage() {
   const [data, setData] = useState<TeamStandingsOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("wins");
   const [animationKey, setAnimationKey] = useState(0);
   const [splits, setSplits] = useState<Split[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
 
-  // On mount: load splits and default to the active one
   useEffect(() => {
     let cancelled = false;
     api.splits
@@ -307,7 +250,6 @@ export default function TeamsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Fetch standings whenever leagueId or selectedCompetitionId changes
   useEffect(() => {
     if (selectedCompetitionId === null || initializing) return;
     setLoading(true);
@@ -321,26 +263,12 @@ export default function TeamsPage() {
 
   const sortedEntries = useMemo(() => {
     if (!data) return [];
-    const entries = [...data.entries];
-    if (sortKey === "wins") {
-      return entries.sort((a, b) => b.wins - a.wins || b.win_rate - a.win_rate);
-    }
-    return entries.sort((a, b) => {
-      const va = a[sortKey] ?? -Infinity;
-      const vb = b[sortKey] ?? -Infinity;
-      return (vb as number) - (va as number);
-    });
-  }, [data, sortKey]);
-
-  function handleSort(key: SortKey) {
-    setSortKey(key);
-    setAnimationKey((k) => k + 1);
-  }
+    return [...data.entries].sort((a, b) => b.wins - a.wins || b.win_rate - a.win_rate);
+  }, [data]);
 
   const headerLabelStyle: React.CSSProperties = {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 10,
-    fontWeight: 600,
+    fontSize: 10, fontWeight: 600,
     letterSpacing: "0.08em",
     color: "#333333",
     textTransform: "uppercase",
@@ -355,85 +283,54 @@ export default function TeamsPage() {
           {data && (
             <p style={{
               fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              color: "#333333",
-              textTransform: "uppercase",
-              marginBottom: 4,
+              fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.1em", color: "#333333",
+              textTransform: "uppercase", marginBottom: 4,
             }}>
               {data.competition_name}
             </p>
           )}
           <h1 style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 30,
-            fontWeight: 700,
-            color: "#F0E8D0",
-            lineHeight: 1.1,
+            fontSize: 30, fontWeight: 700,
+            color: "#F0E8D0", lineHeight: 1.1,
           }}>
             Equipos
           </h1>
         </div>
 
-        {/* Split selector */}
+        {/* Competition selector */}
         {splits.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-            {splits.map((split) => {
-              const isActive = split.id === selectedCompetitionId;
-              return (
-                <button
-                  key={split.id}
-                  onClick={() => {
-                    setSelectedCompetitionId(split.id);
-                    setSortKey("wins");
-                  }}
-                  style={{
-                    background: isActive ? "#FCD400" : "#1A1A1A",
-                    border: `1px solid ${isActive ? "#FCD400" : "#2A2A2A"}`,
-                    borderRadius: 8,
-                    padding: "6px 14px",
-                    color: isActive ? "#000" : "#777",
-                    fontSize: 12,
-                    fontWeight: isActive ? 700 : 500,
-                    cursor: "pointer",
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {split.name}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Sort pills */}
-        {!loading && !error && data && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-            {SORT_PILLS.map(({ key, label }) => {
-              const isActive = sortKey === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => handleSort(key)}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 20,
-                    border: isActive ? "1px solid rgba(252,212,0,0.5)" : "1px solid #2A2A2A",
-                    background: isActive ? "rgba(252,212,0,0.12)" : "#1A1A1A",
-                    color: isActive ? "#FCD400" : "#555555",
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 150ms ease",
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <select
+                value={selectedCompetitionId ?? ""}
+                onChange={(e) => setSelectedCompetitionId(e.target.value)}
+                style={{
+                  appearance: "none",
+                  background: "#1A1A1A",
+                  border: "1px solid #2A2A2A",
+                  borderRadius: 8,
+                  padding: "8px 36px 8px 12px",
+                  color: "#F0E8D0",
+                  fontSize: 13,
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+              >
+                {splits.map((split) => (
+                  <option key={split.id} value={split.id}>{split.name}</option>
+                ))}
+              </select>
+              <svg
+                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+                width="12" height="12" viewBox="0 0 12 12" fill="none"
+              >
+                <path d="M2 4L6 8L10 4" stroke="#555555" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
           </div>
         )}
 
@@ -460,17 +357,20 @@ export default function TeamsPage() {
         {/* Table */}
         {!loading && !error && data && data.entries.length > 0 && (
           <div>
+            {/* Legend — mobile: above headers | desktop: after headers */}
+            <div className="sm:hidden" style={{ marginBottom: 12 }}>
+              <PlayoffLegend />
+            </div>
+
             {/* Table header — two rows */}
             <div style={{ paddingInline: 20, marginBottom: 8 }}>
               {/* Row 1 — group labels */}
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 2 }}>
                 <div style={{ width: 40, flexShrink: 0 }} />
                 <div style={{ flex: 1 }} />
-                {/* BO group: W(28) + gap(12) + L(28) + gap(12) + W%(48) = 128px */}
                 <div style={{ width: 128, flexShrink: 0, textAlign: "center" }}>
                   <span style={{ ...headerLabelStyle, color: "#555555" }}>BO</span>
                 </div>
-                {/* GAMES group: GW(28) + gap(12) + GL(28) = 68px */}
                 <div style={{ width: 68, flexShrink: 0, textAlign: "center" }} className="hidden sm:block">
                   <span style={{ ...headerLabelStyle, color: "#555555" }}>GAMES</span>
                 </div>
@@ -502,37 +402,20 @@ export default function TeamsPage() {
                   <span style={headerLabelStyle}>GL</span>
                 </div>
                 <div style={{ width: 56, flexShrink: 0, textAlign: "center" }} className="hidden sm:block">
-                  <span style={{ ...headerLabelStyle, color: sortKey === "avg_kda" ? "#FCD400" : "#333333" }}>KDA</span>
+                  <span style={headerLabelStyle}>KDA</span>
                 </div>
                 <div style={{ width: 72, flexShrink: 0, textAlign: "center" }} className="hidden sm:block">
-                  <span style={{ ...headerLabelStyle, color: sortKey === "avg_gold_diff_15" ? "#FCD400" : "#333333" }}>GOLD@15</span>
+                  <span style={headerLabelStyle}>GOLD@15</span>
                 </div>
               </div>
             </div>
 
-            {/* Playoff Legend — above the rows */}
-            <div style={{
-              display: "flex",
-              gap: 16,
-              marginBottom: 16,
-              paddingInline: 4,
-              flexWrap: "wrap",
-            }}>
-              {[
-                { color: "#22C55E", label: "Winner Bracket (1-4)" },
-                { color: "#EAB308", label: "Lower Bracket (5-6)" },
-                { color: "#EF4444", label: "Eliminado (7+)" },
-              ].map(({ color, label }) => (
-                <div key={color} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
-                  <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#555555" }}>
-                    {label}
-                  </span>
-                </div>
-              ))}
+            {/* Legend — desktop: after headers */}
+            <div className="hidden sm:block" style={{ marginBottom: 16 }}>
+              <PlayoffLegend />
             </div>
 
-            {/* Rows — animationKey forces cascade restart on sort */}
+            {/* Rows */}
             <div key={animationKey} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {sortedEntries.map((entry, index) => (
                 <TeamRow
@@ -540,7 +423,6 @@ export default function TeamsPage() {
                   entry={entry}
                   pos={index + 1}
                   animationDelay={index * 60}
-                  activeSort={sortKey}
                 />
               ))}
             </div>

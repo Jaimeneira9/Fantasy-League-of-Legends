@@ -331,7 +331,7 @@ function SortableHeader({
       style={{ width, flexShrink: 0, textAlign: "right" }}
       className={hideOnMobile ? "hidden sm:block" : undefined}
     >
-      <button style={headerStyle} onClick={() => onSort(sortKey)}>
+      <button style={headerStyle} onClick={() => onSort(sortKey)} className="hover:text-white transition-colors duration-150">
         {label}
         {/* Chevron SVG */}
         <svg
@@ -496,7 +496,7 @@ function StandingRow({
   };
 
   return (
-    <button className="standing-row animate-cascade-in" style={rowStyle} onClick={onClick}>
+    <button className="standing-row animate-cascade-in hover:bg-white/5 active:scale-[0.98] transition-all duration-150" style={rowStyle} onClick={onClick}>
       {/* POS — 52px */}
       <div style={{ width: 52, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
         <div style={posBadgeStyle}>
@@ -681,7 +681,7 @@ export default function StandingsPage() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:py-10">
 
         {/* ---- Page header ---- */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4" style={{ marginBottom: 28 }}>
           <div>
             {league && (
               <p style={{
@@ -714,6 +714,7 @@ export default function StandingsPage() {
                 }
               }}
               disabled={selectedWeek !== null && selectedWeek <= (availableWeeks[0] ?? 1)}
+              className="hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 4, padding: "2px 8px", cursor: "pointer", fontSize: 16, lineHeight: 1 }}
             >
               ‹
@@ -727,12 +728,14 @@ export default function StandingsPage() {
             <button
               onClick={() => setSelectedWeek((w) => (w != null && w < (currentWeek ?? 0) ? w + 1 : null))}
               disabled={selectedWeek === null || selectedWeek >= (currentWeek ?? 0)}
+              className="hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 4, padding: "2px 8px", cursor: "pointer", fontSize: 16, lineHeight: 1 }}
             >
               ›
             </button>
             <button
               onClick={() => setSelectedWeek(null)}
+              className="active:scale-95 transition-all duration-150"
               style={{
                 background: selectedWeek === null ? "#FCD400" : "none",
                 color: selectedWeek === null ? "#000" : "#aaa",
@@ -742,6 +745,18 @@ export default function StandingsPage() {
                 fontSize: 11,
                 cursor: "pointer",
                 fontWeight: 700,
+              }}
+              onMouseEnter={(e) => {
+                if (selectedWeek !== null) {
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "#fff";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedWeek !== null) {
+                  (e.currentTarget as HTMLButtonElement).style.background = "none";
+                  (e.currentTarget as HTMLButtonElement).style.color = "#aaa";
+                }
               }}
             >
               Total

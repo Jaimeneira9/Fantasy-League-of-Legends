@@ -45,12 +45,14 @@ export default function LeagueLayout({
   return (
     <div className="flex h-[100dvh] bg-background overflow-hidden">
       <Sidebar leagueId={params.id} hasIncompleteRoster={hasIncompleteRoster} />
-      <main className="flex-1 overflow-y-auto">
-        <div ref={contentRef}>
-          {children}
-        </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+          <div ref={contentRef}>
+            {children}
+          </div>
+        </main>
         <BottomNav leagueId={params.id} hasIncompleteRoster={hasIncompleteRoster} />
-      </main>
+      </div>
     </div>
   );
 }
