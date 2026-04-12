@@ -883,7 +883,7 @@ def _update_manager_total_points(
 
             if snap_slots is not None:
                 # Use snapshot
-                filled_starters = {slot for slot in snap_slots if slot in starter_slots}
+                filled_starters = {slot for slot in snap_slots if slot in starter_slots and snap_slots[slot] is not None}
                 if len(filled_starters) < 5:
                     logger.info(
                         "[SCORING SKIP] member %s snapshot has %d/5 starters — no points added for week=%s",

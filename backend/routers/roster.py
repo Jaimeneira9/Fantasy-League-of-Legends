@@ -42,6 +42,7 @@ class RosterPlayerOut(BaseModel):
     for_sale: bool
     is_protected: bool = False
     split_points: float = 0.0
+    jornada_points: float = 0.0
     clause_amount: float | None = None
     clause_expires_at: str | None = None
     player: PlayerBrief
@@ -102,6 +103,34 @@ async def get_roster(
     """Devuelve la plantilla del usuario en una liga."""
     member = _get_member(supabase, str(league_id), user["id"])
 
+    # ── Step 2: Resolve active competition + current week (needed by multiple blocks) ──
+    competition_id: Optional[str] = None
+    current_week: Optional[int] = None
+    try:
+        comp_resp = (
+            supabase.table("competitions")
+            .select("id")
+            .eq("is_active", True)
+            .limit(1)
+            .execute()
+        )
+        if comp_resp.data:
+            competition_id = comp_resp.data[0]["id"]
+            week_resp = (
+                supabase.table("series")
+                .select("week")
+                .eq("competition_id", competition_id)
+                .eq("status", "finished")
+                .order("week", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if week_resp.data:
+                current_week = week_resp.data[0]["week"]
+    except Exception:
+        pass  # non-critical — roster still loads without competition/week
+
+    # ── Step 4: Roster + players ──
     roster_resp = (
         supabase.table("rosters")
         .select("id")
@@ -118,12 +147,12 @@ async def get_roster(
             .eq("roster_id", roster_resp.data[0]["id"])
             .execute()
         )
-        # Collect player_ids to fetch split_points for the active competition
+        # Collect player_ids to fetch points
         player_ids = [row["players"]["id"] for row in (rp_resp.data or []) if row.get("players")]
 
+        # ── Step 6a: split_points (existing logic — unchanged) ──
         split_points_by_player: dict[str, float] = {}
         if player_ids:
-            # Fetch series_points for all series in the active competition
             pss_resp = (
                 supabase.table("player_series_stats")
                 .select("player_id, series_points, series(competition_id, competitions(is_active))")
@@ -137,6 +166,34 @@ async def get_roster(
                     pid = str(pss_row["player_id"])
                     split_points_by_player[pid] = split_points_by_player.get(pid, 0.0) + float(pss_row.get("series_points") or 0.0)
 
+        # ── Step 6b: jornada_points — sum series_points for finished series in current_week ──
+        jornada_points_by_player: dict[str, float] = {}
+        if player_ids and current_week is not None and competition_id is not None:
+            week_series_resp = (
+                supabase.table("series")
+                .select("id")
+                .eq("competition_id", competition_id)
+                .eq("week", current_week)
+                .eq("status", "finished")
+                .execute()
+            )
+            series_ids = [row["id"] for row in (week_series_resp.data or [])]
+            if series_ids:
+                jp_resp = (
+                    supabase.table("player_series_stats")
+                    .select("player_id, series_points")
+                    .in_("series_id", series_ids)
+                    .in_("player_id", player_ids)
+                    .execute()
+                )
+                for jp_row in (jp_resp.data or []):
+                    pid = str(jp_row["player_id"])
+                    jornada_points_by_player[pid] = (
+                        jornada_points_by_player.get(pid, 0.0)
+                        + float(jp_row.get("series_points") or 0.0)
+                    )
+
+        # ── Step 7: Build players_out ──
         for row in (rp_resp.data or []):
             player_id = str(row["players"]["id"])
             players_out.append(RosterPlayerOut(
@@ -146,45 +203,26 @@ async def get_roster(
                 for_sale=row["for_sale"],
                 is_protected=bool(row.get("is_protected", False)),
                 split_points=split_points_by_player.get(player_id, 0.0),
+                jornada_points=jornada_points_by_player.get(player_id, 0.0),
                 clause_amount=float(row["clause_amount"]) if row.get("clause_amount") is not None else None,
                 clause_expires_at=row.get("clause_expires_at"),
                 player=PlayerBrief(**row["players"]),
             ))
 
-    # Fetch active competition + current week to look up captain
+    # ── Step 8: Captain selection ──
     captain_player_id: Optional[UUID] = None
-    current_week: Optional[int] = None
     try:
-        comp_resp = (
-            supabase.table("competitions")
-            .select("id")
-            .eq("is_active", True)
-            .limit(1)
-            .execute()
-        )
-        if comp_resp.data:
-            competition_id = comp_resp.data[0]["id"]
-            # Determine current week: max week from series
-            week_resp = (
-                supabase.table("series")
-                .select("week")
-                .eq("competition_id", competition_id)
-                .order("week", desc=True)
+        if current_week is not None:
+            cap_resp = (
+                supabase.table("captain_selections")
+                .select("captain_player_id")
+                .eq("member_id", member["id"])
+                .eq("week", current_week)
                 .limit(1)
                 .execute()
             )
-            if week_resp.data:
-                current_week = week_resp.data[0]["week"]
-                cap_resp = (
-                    supabase.table("captain_selections")
-                    .select("captain_player_id")
-                    .eq("member_id", member["id"])
-                    .eq("week", current_week)
-                    .limit(1)
-                    .execute()
-                )
-                if cap_resp.data and cap_resp.data[0]["captain_player_id"]:
-                    captain_player_id = cap_resp.data[0]["captain_player_id"]
+            if cap_resp.data and cap_resp.data[0]["captain_player_id"]:
+                captain_player_id = cap_resp.data[0]["captain_player_id"]
     except Exception:
         pass  # captain is non-critical — don't fail roster load
 

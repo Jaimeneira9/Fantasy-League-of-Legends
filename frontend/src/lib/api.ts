@@ -176,6 +176,7 @@ export type RosterPlayer = {
   for_sale: boolean;
   is_protected: boolean;
   split_points?: number | null;
+  jornada_points?: number | null;
   clause_amount: number | null;
   clause_expires_at: string | null;
   player: PlayerBrief & { id: string };
