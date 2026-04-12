@@ -227,6 +227,7 @@ export default function LineupPage() {
                         onOpenStats={(playerId) => router.push(`/leagues/${leagueId}/stats/${playerId}`)}
                         isCaptain={rp !== null && rp.player.id === captainPlayerId}
                         onSetCaptain={rp ? () => handleSetCaptain(rp) : undefined}
+                        currentWeek={currentWeek}
                       />
                     </div>
                   );
@@ -284,6 +285,7 @@ function PlayerCard({
   onOpenStats,
   isCaptain,
   onSetCaptain,
+  currentWeek,
 }: {
   expectedRole: string;
   rp: RosterPlayer | null;
@@ -294,6 +296,7 @@ function PlayerCard({
   onOpenStats?: (playerId: string) => void;
   isCaptain?: boolean;
   onSetCaptain?: () => void;
+  currentWeek?: number | null;
 }) {
   const roleColor = ROLE_COLORS[expectedRole] ?? ROLE_COLORS.coach;
 
@@ -355,6 +358,7 @@ function PlayerCard({
       onOpenStats={onOpenStats ? () => onOpenStats(p.id) : undefined}
       isCaptain={isCaptain ?? false}
       onSetCaptain={onSetCaptain}
+      currentWeek={currentWeek}
     />
   );
 }
@@ -370,6 +374,7 @@ function PlayerCardFilled({
   onOpenStats,
   isCaptain,
   onSetCaptain,
+  currentWeek,
 }: {
   rp: RosterPlayer;
   p: RosterPlayer["player"];
@@ -382,6 +387,7 @@ function PlayerCardFilled({
   onOpenStats?: () => void;
   isCaptain?: boolean;
   onSetCaptain?: () => void;
+  currentWeek?: number | null;
 }) {
   const [popupOpen, setPopupOpen] = useState(false);
   const [popupLoading, setPopupLoading] = useState(false);
@@ -393,6 +399,13 @@ function PlayerCardFilled({
     ? Math.ceil((new Date(rp.clause_expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
   const clauseActive = clauseDays > 0 && rp.clause_amount != null;
+
+  // Points display logic: show jornada_points when jornada is active, split_points otherwise
+  const showJornada = currentWeek != null;
+  const basePoints = showJornada ? (rp.jornada_points ?? 0) : (rp.split_points ?? 0);
+  const displayPoints = showJornada && isCaptain ? Math.round(basePoints * 2) : Math.round(basePoints);
+  const pointsSuffix = showJornada && isCaptain ? "pts ×2" : "pts";
+  const displayPointsStr = showJornada ? String(displayPoints) : (rp.split_points != null ? String(Math.round(rp.split_points)) : "—");
 
   const handleUpgrade = async (amount?: number) => {
     if (!amount) return;
@@ -541,9 +554,9 @@ function PlayerCardFilled({
             {/* Row 3: price + pts */}
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
               <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "16px", fontWeight: 700, color: "#FCD400", letterSpacing: "-0.02em", lineHeight: 1 }}>
-                {rp.split_points != null ? Math.round(rp.split_points) : "—"}
+                {displayPointsStr}
               </span>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px", color: "#888888" }}>pts</span>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px", color: "#888888" }}>{pointsSuffix}</span>
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "11px", color: "#777777", marginLeft: "auto" }}>
                 {p.current_price.toFixed(1)}M
               </span>
@@ -677,103 +690,64 @@ function PlayerCardFilled({
             🛡
           </div>
         )}
-        {/* For sale badge */}
-        {rp.for_sale && (
+        {/* Unified bottom panel */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 30,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            padding: "0 10px",
+            zIndex: 2,
+          }}
+        >
+          {/* Captain button */}
           <div
+            onClick={onSetCaptain}
             style={{
-              position: "absolute",
-              bottom: "8px",
-              left: "8px",
-              fontSize: "9px",
-              color: "#fb923c",
-              background: "rgba(251,146,60,0.2)",
-              border: "1px solid rgba(251,146,60,0.3)",
-              padding: "2px 6px",
-              borderRadius: "4px",
-              fontWeight: 600,
+              width: 18,
+              height: 18,
+              borderRadius: "50%",
+              background: isCaptain ? "#FCD400" : "rgba(252,212,0,0.15)",
+              border: isCaptain ? "1.5px solid rgba(0,0,0,0.5)" : "1px solid rgba(252,212,0,0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+              zIndex: 10,
             }}
           >
-            venta
+            <span style={{ fontFamily: "Space Grotesk", fontSize: 8, fontWeight: 700, color: isCaptain ? "#000" : "rgba(252,212,0,0.6)" }}>C</span>
           </div>
-        )}
-        {/* Clause badge */}
-        {clauseActive && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setPopupOpen(true); }}
-            style={{
-              position: "absolute",
-              bottom: "8px",
-              right: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "3px",
-              fontSize: "10px",
-              fontWeight: 700,
-              color: "#5eead4",
-              background: "rgba(20,184,166,0.15)",
-              border: "1px solid rgba(20,184,166,0.3)",
-              padding: "2px 6px",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontFamily: "'Space Grotesk', sans-serif",
-              lineHeight: 1.4,
-            }}
-          >
-            🔒 {clauseDays}d
-          </button>
-        )}
-        {/* Captain badge / button (desktop) */}
-        {isCaptain ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); onSetCaptain?.(); }}
-            style={{
-              position: "absolute",
-              top: isMvp ? "36px" : "8px",
-              right: "8px",
-              width: 20,
-              height: 20,
-              borderRadius: "50%",
-              background: "#FCD400",
-              border: "1.5px solid #000",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#000",
-              cursor: "pointer",
-              zIndex: 10,
-              padding: 0,
-            }}
-          >
-            C
-          </button>
-        ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onSetCaptain?.(); }}
-            style={{
-              position: "absolute",
-              top: isMvp ? "36px" : "8px",
-              right: "8px",
-              width: 20,
-              height: 20,
-              borderRadius: "50%",
-              background: "rgba(252,212,0,0.15)",
-              border: "1px solid rgba(252,212,0,0.3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 9,
-              fontWeight: 700,
-              color: "rgba(252,212,0,0.6)",
-              cursor: "pointer",
-              zIndex: 10,
-              padding: 0,
-            }}
-          >
-            C
-          </button>
-        )}
+
+          <div style={{ flex: 1 }} />
+
+          {rp.for_sale && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#f97316", flexShrink: 0 }} />
+              <span style={{ fontFamily: "Space Grotesk", fontSize: 9, fontWeight: 500, color: "#f97316" }}>en venta</span>
+            </div>
+          )}
+
+          {rp.for_sale && clauseDays !== null && (
+            <div style={{ width: 1, height: 8, background: "#2a2a2a", margin: "0 8px" }} />
+          )}
+
+          {clauseDays !== null && (
+            <div onClick={() => setPopupOpen(true)} style={{ display: "flex", alignItems: "center", gap: 3, cursor: "pointer" }}>
+              <svg width="7" height="8" viewBox="0 0 9 10" fill="none">
+                <rect x="0.7" y="4.5" width="7.6" height="5" rx="1.2" stroke="#2dd4bf" strokeWidth="1.2" />
+                <path d="M2.3 4.5V3C2.3 1.95 3.2 1.1 4.5 1.1C5.8 1.1 6.7 1.95 6.7 3V4.5" stroke="#2dd4bf" strokeWidth="1.2" />
+              </svg>
+              <span style={{ fontFamily: "Space Grotesk", fontSize: 9, fontWeight: 600, color: "#2dd4bf" }}>{clauseDays}d</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* INFO ZONE */}
@@ -833,7 +807,7 @@ function PlayerCardFilled({
               lineHeight: 1,
             }}
           >
-            {rp.split_points != null ? Math.round(rp.split_points) : "—"}
+            {displayPointsStr}
           </span>
           <span
             style={{
@@ -843,7 +817,7 @@ function PlayerCardFilled({
               marginLeft: "4px",
             }}
           >
-            pts
+            {pointsSuffix}
           </span>
           <span
             style={{
