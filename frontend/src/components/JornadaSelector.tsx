@@ -11,63 +11,107 @@ export function JornadaSelector({
 }) {
   if (weeks.length === 0) return null;
 
+  // Build the full list: null = "Actual" (current), then each historical week
+  const allOptions: (number | null)[] = [null, ...weeks];
+  const currentIndex = allOptions.indexOf(selected);
+  const isFirst = currentIndex <= 0;
+  const isLast = currentIndex >= allOptions.length - 1;
+
+  const goBack = () => {
+    if (isFirst) return;
+    onChange(allOptions[currentIndex - 1]);
+  };
+
+  const goForward = () => {
+    if (isLast) return;
+    onChange(allOptions[currentIndex + 1]);
+  };
+
+  const label = selected === null ? "Actual" : String(selected);
+
   return (
-    <div style={{
-      display: "flex",
-      overflowX: "auto",
-      flexWrap: "nowrap",
-      gap: 6,
-      paddingBottom: 4,
-      scrollbarWidth: "none",
-      msOverflowStyle: "none",
-      WebkitOverflowScrolling: "touch",
-    } as React.CSSProperties}>
-      {/* "Actual" chip */}
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        background: "#161616",
+        border: "1px solid #2a2a2a",
+        borderRadius: "8px",
+        overflow: "hidden",
+        height: "32px",
+      }}
+    >
+      {/* Left chevron */}
       <button
-        onClick={() => onChange(null)}
+        onClick={goBack}
+        disabled={isFirst}
         style={{
-          background: selected === null ? "#FCD400" : "#1A1A1A",
-          border: `1px solid ${selected === null ? "#FCD400" : "#2A2A2A"}`,
-          borderRadius: 8,
-          padding: "6px 14px",
-          color: selected === null ? "#000" : "#777",
-          fontSize: 12,
-          fontWeight: selected === null ? 700 : 500,
-          cursor: "pointer",
-          fontFamily: "'Barlow Condensed', sans-serif",
-          letterSpacing: "0.04em",
+          width: "28px",
+          height: "32px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "transparent",
+          border: "none",
+          cursor: isFirst ? "default" : "pointer",
+          padding: 0,
+          opacity: isFirst ? 0.3 : 1,
           flexShrink: 0,
-          whiteSpace: "nowrap",
         }}
+        aria-label="Jornada anterior"
       >
-        Actual
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M9 11L5 7L9 3" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
 
-      {weeks.map((w) => {
-        const isActive = selected === w;
-        return (
-          <button
-            key={w}
-            onClick={() => onChange(w)}
-            style={{
-              background: isActive ? "#FCD400" : "#1A1A1A",
-              border: `1px solid ${isActive ? "#FCD400" : "#2A2A2A"}`,
-              borderRadius: 8,
-              padding: "6px 14px",
-              color: isActive ? "#000" : "#777",
-              fontSize: 12,
-              fontWeight: isActive ? 700 : 500,
-              cursor: "pointer",
-              fontFamily: "'Barlow Condensed', sans-serif",
-              letterSpacing: "0.04em",
-              flexShrink: 0,
-              whiteSpace: "nowrap",
-            }}
-          >
-            Jornada {w}
-          </button>
-        );
-      })}
+      {/* Divider */}
+      <div style={{ width: "1px", height: "18px", background: "#2a2a2a", flexShrink: 0 }} />
+
+      {/* Label */}
+      <span
+        style={{
+          fontFamily: "'Barlow Condensed', sans-serif",
+          fontSize: "13px",
+          fontWeight: 600,
+          color: "#ffffff",
+          letterSpacing: "0.04em",
+          minWidth: "48px",
+          textAlign: "center",
+          padding: "0 8px",
+          userSelect: "none",
+          lineHeight: 1,
+        }}
+      >
+        {label}
+      </span>
+
+      {/* Divider */}
+      <div style={{ width: "1px", height: "18px", background: "#2a2a2a", flexShrink: 0 }} />
+
+      {/* Right chevron */}
+      <button
+        onClick={goForward}
+        disabled={isLast}
+        style={{
+          width: "28px",
+          height: "32px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "transparent",
+          border: "none",
+          cursor: isLast ? "default" : "pointer",
+          padding: 0,
+          opacity: isLast ? 0.3 : 1,
+          flexShrink: 0,
+        }}
+        aria-label="Jornada siguiente"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M5 3L9 7L5 11" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
     </div>
   );
 }
