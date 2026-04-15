@@ -584,6 +584,7 @@ function StandingRow({
 export default function StandingsPage() {
   const { id: leagueId } = useParams<{ id: string }>();
   const initialLoadDone = useRef(false);
+  const skipNextWeekEffect = useRef(false);
   const [entries, setEntries]               = useState<LeaderboardEntry[]>([]);
   const [detailedEntries, setDetailedEntries] = useState<DetailedLeaderboardEntry[]>([]);
   const [league, setLeague]                 = useState<League | null>(null);
@@ -651,7 +652,8 @@ export default function StandingsPage() {
         setEntries(board.entries);
         setAvailableWeeks(board.available_weeks);
         setCurrentWeek(board.current_week);
-        // Inicializar en la semana actual; el useEffect de selectedWeek lo re-fetcheará con week_points
+        // Inicializar en la semana actual; marcar para que el useEffect de selectedWeek no re-fetchee
+        skipNextWeekEffect.current = true;
         setSelectedWeek(board.current_week);
       })
       .catch((e: Error) => setError(e.message))
@@ -667,7 +669,8 @@ export default function StandingsPage() {
     api.scoring.detailedLeaderboard(leagueId)
       .then((detailed) => {
         setDetailedEntries(detailed);
-        setAnimationKey((k) => k + 1); // re-trigger cascade when stats arrive
+        // No re-trigger de animación: los datos visibles (rank, total_points) no cambian,
+        // solo se agrega el statsMap para AVG PTS. Evita el tercer flash.
       })
       .catch(() => {
         // Graceful degradation — keep entries without stats
@@ -676,6 +679,11 @@ export default function StandingsPage() {
 
   // Re-fetch leaderboard cuando cambia la semana seleccionada (skip durante carga inicial)
   useEffect(() => {
+    // Consumir el flag antes de cualquier return para que el próximo cambio sí ejecute
+    if (skipNextWeekEffect.current) {
+      skipNextWeekEffect.current = false;
+      return;
+    }
     if (!initialLoadDone.current) return;
     api.scoring.leaderboard(leagueId, selectedWeek)
       .then((board: LeaderboardResponse) => {
