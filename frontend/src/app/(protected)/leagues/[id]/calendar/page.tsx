@@ -272,6 +272,29 @@ function SkeletonCards() {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers — current week detection
+// ---------------------------------------------------------------------------
+
+function detectCurrentWeekLabel(
+  weeks: Array<{ week: number | null; label: string; matches: SeriesCalendarEntry[] }>
+): string | null {
+  // 1. Prefer the week that has at least one in_progress series
+  const inProgress = weeks.find((w) =>
+    w.matches.some((m) => m.status === "in_progress")
+  );
+  if (inProgress) return inProgress.label;
+
+  // 2. Fall back to the first week that still has scheduled series
+  const nextUp = weeks.find((w) =>
+    w.matches.some((m) => m.status === "scheduled")
+  );
+  if (nextUp) return nextUp.label;
+
+  // 3. Nothing upcoming — expand the last week
+  return weeks.length > 0 ? weeks[weeks.length - 1].label : null;
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -281,6 +304,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -302,6 +326,28 @@ export default function CalendarPage() {
       cancelled = true;
     };
   }, [leagueId]);
+
+  // Once data arrives, expand the current/upcoming week by default
+  useEffect(() => {
+    if (!data) return;
+    const weeks = groupByWeek(data.series);
+    const currentLabel = detectCurrentWeekLabel(weeks);
+    if (currentLabel) {
+      setExpandedWeeks(new Set([currentLabel]));
+    }
+  }, [data]);
+
+  function toggleWeek(label: string) {
+    setExpandedWeeks((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  }
 
   if (initializing) return null;
 
@@ -351,30 +397,79 @@ export default function CalendarPage() {
         {/* Weeks */}
         {!loading &&
           !error &&
-          weeks.map((week) => (
-            <div key={week.label} style={{ marginBottom: 28 }}>
-              {/* Week header */}
-              <p
+          weeks.map((week) => {
+            const isExpanded = expandedWeeks.has(week.label);
+            return (
+              <div
+                key={week.label}
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  color: "#333333",
-                  textTransform: "uppercase",
                   marginBottom: 10,
+                  background: "#1a1a1a",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 14,
+                  overflow: "hidden",
                 }}
               >
-                {week.label}
-              </p>
-              {/* Match cards */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {week.matches.map((entry) => (
-                  <MatchCard key={entry.series_id} entry={entry} leagueId={leagueId} />
-                ))}
+                {/* Week header — collapsible */}
+                <button
+                  onClick={() => toggleWeek(week.label)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "14px 16px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      color: "#FCD400",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {week.label}
+                  </span>
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{
+                      transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 200ms ease",
+                      color: "#FCD400",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <path
+                      d="M2.5 5L7 9.5L11.5 5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+
+                {/* Match cards — shown only when expanded */}
+                {isExpanded && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "0 10px 10px" }}>
+                    {week.matches.map((entry) => (
+                      <MatchCard key={entry.series_id} entry={entry} leagueId={leagueId} />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
       </main>
     </div>
   );
