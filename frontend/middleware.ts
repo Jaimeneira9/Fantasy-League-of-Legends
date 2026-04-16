@@ -38,14 +38,25 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublicRoute = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
 
+  // Helper: redirect preservando las cookies que Supabase pudo haber renovado
+  // (si el token se renovó durante getUser() y hacemos NextResponse.redirect()
+  // directo, las cookies actualizadas se pierden)
+  const redirectWithCookies = (url: URL) => {
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach(({ name, value, ...options }) => {
+      redirectResponse.cookies.set(name, value, options);
+    });
+    return redirectResponse;
+  };
+
   // Usuario auth intentando acceder a login/signup o root → dashboard
   if (user && (isPublicRoute || pathname === "/")) {
-    return NextResponse.redirect(new URL(DEFAULT_PROTECTED, request.url));
+    return redirectWithCookies(new URL(DEFAULT_PROTECTED, request.url));
   }
 
   // Usuario no auth intentando acceder a ruta protegida → login
   if (!user && !isPublicRoute) {
-    return NextResponse.redirect(new URL(AUTH_REDIRECT, request.url));
+    return redirectWithCookies(new URL(AUTH_REDIRECT, request.url));
   }
 
   // Onboarding guard: usuario auth sin onboarding completado → /onboarding
@@ -53,7 +64,7 @@ export async function middleware(request: NextRequest) {
     const onboardingCompleted =
       user.user_metadata?.onboarding_completed === true;
     if (!onboardingCompleted) {
-      return NextResponse.redirect(new URL(ONBOARDING_ROUTE, request.url));
+      return redirectWithCookies(new URL(ONBOARDING_ROUTE, request.url));
     }
   }
 
