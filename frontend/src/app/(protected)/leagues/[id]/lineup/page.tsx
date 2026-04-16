@@ -412,21 +412,13 @@ export default function LineupPage() {
           </div>
         )}
 
-        {/* Banner read-only en modo histórico */}
-        {selectedWeek !== null && (
-          <div className="mb-4 px-4 py-2 rounded-xl text-xs font-semibold text-center"
-            style={{ background: "#1A1A1A", color: "#FCD400", border: "1px solid #2A2A2A" }}>
-            Viendo Jornada {selectedWeek} — solo lectura
-          </div>
-        )}
-
         {weekLoading ? (
           <LineupSkeleton />
         ) : loading ? (
           <LineupSkeleton />
         ) : roster?.snapshot_missing ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Sin lineup registrado para esta jornada</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>No hay datos para la jornada seleccionada</p>
           </div>
         ) : !roster || roster.players.length === 0 ? (
           <EmptyRoster leagueId={leagueId} />
@@ -816,14 +808,15 @@ function PlayerCardFilled({
               </span>
             </div>
 
-            {/* Row 3: price + pts */}
-            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+            {/* Row 3: pts | precio */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "16px", fontWeight: 700, color: "#FCD400", letterSpacing: "-0.02em", lineHeight: 1 }}>
                 {displayPointsStr}
               </span>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px", color: "#888888", marginLeft: "2px" }}>{pointsSuffix}</span>
-              <span style={{ display: "flex", alignItems: "center", gap: "3px", marginLeft: "auto" }}>
-                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "11px", color: "#777777" }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px", color: "#888888" }}>{pointsSuffix}</span>
+              <span style={{ width: 1, height: 12, background: "#2a2a2a", display: "inline-block", marginLeft: "2px", alignSelf: "center" }} />
+              <span style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "11px", color: "#555555" }}>
                   {p.current_price.toFixed(1)}M
                 </span>
                 <PriceTrend pct={p.last_price_change_pct} />
@@ -1063,7 +1056,7 @@ function PlayerCardFilled({
         {/* Divisor */}
         <div style={{ height: "1px", background: "#1E1E1E", marginBlock: "4px" }} />
 
-        {/* Fila 3 — Pts + Precio */}
+        {/* Fila 3 — Pts */}
         <div style={{ display: "flex", alignItems: "baseline" }}>
           <span
             style={{
@@ -1087,18 +1080,20 @@ function PlayerCardFilled({
           >
             {pointsSuffix}
           </span>
-          <span style={{ display: "flex", alignItems: "center", gap: "3px", marginLeft: "auto" }}>
-            <span
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: "12px",
-                color: "#777777",
-              }}
-            >
-              {p.current_price.toFixed(1)}M
-            </span>
-            <PriceTrend pct={p.last_price_change_pct} />
+        </div>
+
+        {/* Fila 3b — Precio */}
+        <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+          <span
+            style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: "12px",
+              color: "#555555",
+            }}
+          >
+            {p.current_price.toFixed(1)}M
           </span>
+          <PriceTrend pct={p.last_price_change_pct} />
         </div>
 
         {/* Fila 4 — Stats button */}
