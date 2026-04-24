@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,9 +14,13 @@ router = APIRouter()
 # Schemas
 # ---------------------------------------------------------------------------
 
+GameMode = Literal["draft_market", "budget_pick"]
+
+
 class LeagueCreate(BaseModel):
     name: str = Field(min_length=3, max_length=60)
     max_members: int = Field(default=8, ge=2, le=9)
+    game_mode: GameMode = "draft_market"
 
 
 class MemberOut(BaseModel):
@@ -44,6 +49,7 @@ class LeagueOut(BaseModel):
     max_members: int
     is_active: bool
     member: MemberBrief | None = None
+    game_mode: str = "draft_market"
 
 
 class JoinRequest(BaseModel):
@@ -75,7 +81,7 @@ async def list_leagues(
 
     response = (
         supabase.table("fantasy_leagues")
-        .select("id, name, invite_code, owner_id, competition_id, budget, max_members, is_active, competitions(name)")
+        .select("id, name, invite_code, owner_id, competition_id, budget, max_members, is_active, game_mode, competitions(name)")
         .in_("id", league_ids)
         .execute()
     )
@@ -127,6 +133,7 @@ async def create_league(
             "owner_id": user["id"],
             "max_members": body.max_members,
             "competition_id": active_comp["id"],
+            "game_mode": body.game_mode,
         })
         .execute()
     )
@@ -139,12 +146,14 @@ async def create_league(
     }).execute()
 
     # Inicializar mercado inmediatamente (8 listings, closes_at = now + 24h)
-    try:
-        from market.refresh import initialize_league_market
-        initialize_league_market(supabase, league["id"])
-    except Exception as exc:
-        import logging
-        logging.getLogger(__name__).error("Failed to initialize market for league %s: %s", league["id"], exc)
+    # En ligas budget_pick no hay mercado
+    if body.game_mode != "budget_pick":
+        try:
+            from market.refresh import initialize_league_market
+            initialize_league_market(supabase, league["id"])
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error("Failed to initialize market for league %s: %s", league["id"], exc)
 
     return league
 
@@ -219,7 +228,7 @@ async def get_league(
 
     response = (
         supabase.table("fantasy_leagues")
-        .select("id, name, invite_code, owner_id, competition_id, budget, max_members, is_active, competitions(name)")
+        .select("id, name, invite_code, owner_id, competition_id, budget, max_members, is_active, game_mode, competitions(name)")
         .eq("id", str(league_id))
         .single()
         .execute()

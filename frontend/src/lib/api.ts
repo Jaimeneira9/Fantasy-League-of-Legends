@@ -162,6 +162,7 @@ export type League = {
   budget: number;
   competition: string;
   is_active: boolean;
+  game_mode: string;
   member: { id: string; remaining_budget: number; total_points: number } | null;
 };
 
@@ -264,6 +265,25 @@ export type CaptainResponse = {
   success: boolean;
   captain_player_id: string | null;
   message: string;
+};
+
+export type AvailablePlayer = {
+  id: string;
+  name: string;
+  team: string;
+  role: string;
+  image_url: string | null;
+  current_price: number;
+  in_my_roster: boolean;
+};
+
+export type PickResult = {
+  ok: boolean;
+  slot: string;
+  player_id: string;
+  price_paid: number;
+  remaining_budget: number;
+  released_player_id: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -395,10 +415,10 @@ export const api = {
   leagues: {
     list: () => req<League[]>("/leagues/"),
     get: (id: string) => req<League>(`/leagues/${id}`),
-    create: (name: string, maxMembers: number) =>
+    create: (name: string, maxMembers: number, gameMode: "draft_market" | "budget_pick" = "draft_market") =>
       req<League>("/leagues/", {
         method: "POST",
-        body: JSON.stringify({ name, max_members: maxMembers }),
+        body: JSON.stringify({ name, max_members: maxMembers, game_mode: gameMode }),
       }),
     join: (inviteCode: string) =>
       req("/leagues/join", {
@@ -412,6 +432,13 @@ export const api = {
   roster: {
     get: (leagueId: string, week?: number | null) =>
       req<Roster>(`/roster/${leagueId}${week != null ? `?week=${week}` : ""}`),
+    availablePlayers: (leagueId: string, role?: string) =>
+      req<AvailablePlayer[]>(`/roster/${leagueId}/available-players${role ? `?role=${role}` : ""}`),
+    pick: (leagueId: string, playerId: string, slot: string) =>
+      req<PickResult>(`/roster/${leagueId}/pick`, {
+        method: "POST",
+        body: JSON.stringify({ player_id: playerId, slot }),
+      }),
     move: (leagueId: string, rosterPlayerId: string, newSlot: Slot) =>
       req(`/roster/${leagueId}/move`, {
         method: "PATCH",

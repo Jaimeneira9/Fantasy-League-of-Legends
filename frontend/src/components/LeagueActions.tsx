@@ -56,6 +56,7 @@ export function LeagueActions() {
 function CreateForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [maxMembers, setMaxMembers] = useState(8);
+  const [gameMode, setGameMode] = useState<"draft_market" | "budget_pick">("draft_market");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +65,7 @@ function CreateForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
     setBusy(true);
     setError(null);
     try {
-      await api.leagues.create(name.trim(), maxMembers);
+      await api.leagues.create(name.trim(), maxMembers, gameMode);
       onDone();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al crear la liga");
@@ -139,6 +140,33 @@ function CreateForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
             e.currentTarget.style.boxShadow = "none";
           }}
         />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs uppercase tracking-wider font-medium" style={{ color: "var(--text-secondary)" }}>
+          Modo de juego
+        </label>
+        <select
+          value={gameMode}
+          onChange={(e) => setGameMode(e.target.value as "draft_market" | "budget_pick")}
+          className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-medium)",
+            color: "var(--text-primary)",
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--color-primary)";
+            e.currentTarget.style.boxShadow = "0 0 0 3px var(--color-primary-bg)";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--border-medium)";
+            e.currentTarget.style.boxShadow = "none";
+          }}
+        >
+          <option value="draft_market">Mercado</option>
+          <option value="budget_pick">Presupuesto Libre</option>
+        </select>
       </div>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
