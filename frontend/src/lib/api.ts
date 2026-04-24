@@ -274,6 +274,8 @@ export type AvailablePlayer = {
   role: string;
   image_url: string | null;
   current_price: number;
+  last_price_change_pct: number;
+  split_points: number;
   in_my_roster: boolean;
 };
 
